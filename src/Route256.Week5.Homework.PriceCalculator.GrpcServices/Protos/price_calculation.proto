@@ -4,6 +4,16 @@ option csharp_namespace = "Route256.Week5.Homework.PriceCalculator.GrpcServices"
 
 service DeliveryPriceCalculator {
   rpc Calculate (CalculationRequest) returns (CalculationResponse);
+  rpc ClearHistory (ClearHistoryRequest) returns (ClearHistoryResponse);
+}
+
+message ClearHistoryResponse {
+  
+}
+
+message ClearHistoryRequest {
+  int64 UserId = 1;
+  repeated int64 CalculationIds = 2;
 }
 
 message CalculationRequest {

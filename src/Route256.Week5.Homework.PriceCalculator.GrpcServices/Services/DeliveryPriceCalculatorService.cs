@@ -8,12 +8,10 @@ namespace Route256.Week5.Homework.PriceCalculator.GrpcServices.Services;
 public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPriceCalculatorBase
 {
     private readonly IMediator _mediator;
-    private readonly IServiceProvider _serviceProvider;
 
-    public DeliveryPriceCalculatorService(IMediator mediator, IServiceProvider serviceProvider)
+    public DeliveryPriceCalculatorService(IMediator mediator)
     {
         _mediator = mediator;
-        _serviceProvider = serviceProvider;
     }
 
     public override async Task<CalculationResponse> Calculate(CalculationRequest request, ServerCallContext context)
@@ -28,7 +26,6 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
                     x.Weight))
                 .ToArray());
 
-        await using var scope = _serviceProvider.CreateAsyncScope(); 
         var result = await _mediator.Send(command, context.CancellationToken);
 
         return new CalculationResponse
@@ -36,5 +33,18 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
             CalculationId = result.CalculationId,
             Price = DecimalValue.FromDecimal(result.Price)
         };
+    }
+
+    public override async Task<ClearHistoryResponse> ClearHistory(ClearHistoryRequest request,
+        ServerCallContext context)
+    {
+        var query = new ClearHistoryCommand(
+            request.UserId,
+            request.CalculationIds.ToArray()
+        );
+        
+        await _mediator.Send(query, context.CancellationToken);
+
+        return new ClearHistoryResponse();
     }
 }
