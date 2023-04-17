@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Route256.Week5.Homework.Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Route256.Week5.Homework.PriceCalculator.GrpcServices", "src\Route256.Week5.Homework.PriceCalculator.GrpcServices\Route256.Week5.Homework.PriceCalculator.GrpcServices.csproj", "{D4E24E2C-5211-4BF3-84F1-0034B85692B5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Route256.Week5.Homework.PriceCalculator.GrpcClient", "src\Route256.Week5.Homework.PriceCalculator.GrpcClient\Route256.Week5.Homework.PriceCalculator.GrpcClient.csproj", "{CF4A2E31-1085-41CE-A202-666281BF1221}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,10 @@ Global
 		{D4E24E2C-5211-4BF3-84F1-0034B85692B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4E24E2C-5211-4BF3-84F1-0034B85692B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4E24E2C-5211-4BF3-84F1-0034B85692B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF4A2E31-1085-41CE-A202-666281BF1221}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF4A2E31-1085-41CE-A202-666281BF1221}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF4A2E31-1085-41CE-A202-666281BF1221}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF4A2E31-1085-41CE-A202-666281BF1221}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A81B5635-C0CA-4AA2-AD1D-D91288A2C43A} = {66F59723-311B-4F39-80B5-DA3070F4309F}
@@ -67,5 +73,6 @@ Global
 		{AA3760DB-E035-475C-B8EB-E1069708F41A} = {54786A8F-E674-4A31-8303-F193499DBCEA}
 		{E69F81B6-4B1A-4341-82CD-96091945D7A0} = {54786A8F-E674-4A31-8303-F193499DBCEA}
 		{D4E24E2C-5211-4BF3-84F1-0034B85692B5} = {66F59723-311B-4F39-80B5-DA3070F4309F}
+		{CF4A2E31-1085-41CE-A202-666281BF1221} = {66F59723-311B-4F39-80B5-DA3070F4309F}
 	EndGlobalSection
 EndGlobal
