@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Route256.Week5.Homework.PriceCalculator.Bll\Route256.Week5.Homework.PriceCalculator.Bll.csproj" />
     <ProjectReference Include="..\Route256.Week5.Homework.PriceCalculator.Dal\Route256.Week5.Homework.PriceCalculator.Dal.csproj" />
+    <ProjectReference Include="..\Route256.Week5.Homework.PriceCalculator.GrpcServices\Route256.Week5.Homework.PriceCalculator.GrpcServices.csproj" />
   </ItemGroup>
 
   <ItemGroup>

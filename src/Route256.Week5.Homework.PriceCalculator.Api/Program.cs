@@ -3,6 +3,8 @@ using Route256.Week5.Homework.PriceCalculator.Api.Middleware;
 using Route256.Week5.Homework.PriceCalculator.Api.NamingPolicies;
 using Route256.Week5.Homework.PriceCalculator.Bll.Extensions;
 using Route256.Week5.Homework.PriceCalculator.Dal.Extensions;
+using Route256.Week5.Homework.PriceCalculator.GrpcServices.Extensions;
+using Route256.Week5.Homework.PriceCalculator.GrpcServices.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,7 +36,8 @@ services.AddFluentValidation(conf =>
 services
     .AddBll()
     .AddDalInfrastructure(builder.Configuration)
-    .AddDalRepositories();
+    .AddDalRepositories()
+    .AddGrpcServices();
 
 var app = builder.Build();
 
@@ -46,5 +49,7 @@ if (app.Environment.IsDevelopment())
 }
 app.UseMiddleware<ExceptionHandlerMiddleware>();
 app.MapControllers();
+app.MapGrpcService<DeliveryPriceCalculatorService>();
+app.MapGrpcReflectionService();
 app.MigrateUp();
 app.Run();
