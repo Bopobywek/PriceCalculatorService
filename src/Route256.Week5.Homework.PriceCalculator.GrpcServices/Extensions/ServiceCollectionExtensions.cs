@@ -1,4 +1,6 @@
-﻿namespace Route256.Week5.Homework.PriceCalculator.GrpcServices.Extensions;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace Route256.Week5.Homework.PriceCalculator.GrpcServices.Extensions;
 
 public static class ServiceCollectionExtensions
 {

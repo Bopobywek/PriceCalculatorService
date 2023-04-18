@@ -1,8 +1,10 @@
 ﻿using Grpc.Core;
 using MediatR;
 using Route256.Week5.Homework.PriceCalculator.Bll.Commands;
+using Route256.Week5.Homework.PriceCalculator.Bll.Exceptions;
 using Route256.Week5.Homework.PriceCalculator.Bll.Models;
 using Route256.Week5.Homework.PriceCalculator.Bll.Queries;
+using Route256.Week5.Homework.PriceCalculator.GrpcServices.Validators;
 
 namespace Route256.Week5.Homework.PriceCalculator.GrpcServices.Services;
 
@@ -17,6 +19,13 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
 
     public override async Task<CalculationResponse> Calculate(CalculationRequest request, ServerCallContext context)
     {
+        var validator = new CalculationRequestValidator();
+        var validationResult = await validator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, validationResult.ToString()));
+        }
+
         var command = new CalculateDeliveryPriceCommand(
             request.UserId,
             request.Goods
@@ -27,7 +36,15 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
                     x.Weight))
                 .ToArray());
 
-        var result = await _mediator.Send(command, context.CancellationToken);
+        CalculateDeliveryPriceResult result;
+        try
+        {
+            result = await _mediator.Send(command, context.CancellationToken);
+        }
+        catch (Exception exception)
+        {
+            throw new RpcException(new Status(StatusCode.Internal, exception.Message));
+        }
 
         return new CalculationResponse
         {
@@ -39,12 +56,34 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
     public override async Task<ClearHistoryResponse> ClearHistory(ClearHistoryRequest request,
         ServerCallContext context)
     {
+        var validator = new ClearHistoryRequestValidator();
+        var validationResult = await validator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, validationResult.ToString()));
+        }
+
         var query = new ClearHistoryCommand(
             request.UserId,
             request.CalculationIds.ToArray()
         );
 
-        await _mediator.Send(query, context.CancellationToken);
+        try
+        {
+            await _mediator.Send(query, context.CancellationToken);
+        }
+        catch (OneOrManyCalculationsNotFoundException)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "One or manu calculations not found"));
+        }
+        catch (OneOrManyCalculationsBelongsToAnotherUserException)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, "One or manu belongs to another user"));
+        }
+        catch (Exception exception)
+        {
+            throw new RpcException(new Status(StatusCode.Internal, exception.Message));
+        }
 
         return new ClearHistoryResponse();
     }
@@ -53,6 +92,14 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
         IServerStreamWriter<GetHistoryResponse> responseStream,
         ServerCallContext context)
     {
+        var validator = new GetHistoryRequestValidator();
+        var validationResult = await validator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            throw new RpcException(
+                new Status(StatusCode.InvalidArgument, validationResult.ToString()));
+        }
+
         const int take = 100;
         int skip = 0;
         GetHistoryQueryResult result;
@@ -63,7 +110,14 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
                 take,
                 skip);
 
-            result = await _mediator.Send(query, context.CancellationToken);
+            try
+            {
+                result = await _mediator.Send(query, context.CancellationToken);
+            }
+            catch (Exception exception)
+            {
+                throw new RpcException(new Status(StatusCode.Internal, exception.Message));
+            }
 
             foreach (var historyItem in result.Items)
             {
