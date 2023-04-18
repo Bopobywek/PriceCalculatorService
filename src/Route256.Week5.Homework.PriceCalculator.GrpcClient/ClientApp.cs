@@ -2,17 +2,20 @@
 using System.Text.Json;
 using Grpc.Core;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Options;
+using Route256.Week5.Homework.PriceCalculator.GrpcClient.Interfaces;
+using Route256.Week5.Homework.PriceCalculator.GrpcClient.Options;
 
 namespace Route256.Week5.Homework.PriceCalculator.GrpcClient;
 
-public class ClientApp
+public class ClientApp : IConsoleApp
 {
     private readonly DeliveryPriceCalculator.DeliveryPriceCalculatorClient _client;
     private readonly Dictionary<string, Func<Task>> _availableMethods;
     
-    public ClientApp()
+    public ClientApp(IOptions<ClientOptions> options)
     {
-        var channel = GrpcChannel.ForAddress("http://localhost:5001");
+        var channel = GrpcChannel.ForAddress(options.Value.ServiceEndpoint);
         _client = new DeliveryPriceCalculator.DeliveryPriceCalculatorClient(channel);
         _availableMethods = new Dictionary<string, Func<Task>>
         {
@@ -22,7 +25,7 @@ public class ClientApp
         };
     }
 
-    public async Task Run()
+    public async Task Run(CancellationToken cancellationToken)
     {
         string exitCommand;
         do
@@ -140,7 +143,7 @@ public class ClientApp
     {
         var repeated = new List<T>();
         const string inputMessage = "Ввод нескольких объектов || Для создания объекта введите \"create\"." +
-                                    "\nИначе, чтобы сформировать список введенных товаров, введите \"stop\": ";
+                                    "\nИначе, чтобы сформировать список введенных объектов, введите \"stop\": ";
         Console.Write(inputMessage);
         var line = Console.ReadLine();
         while (line != "stop")

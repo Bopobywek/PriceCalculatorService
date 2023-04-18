@@ -37,7 +37,7 @@ services
     .AddBll()
     .AddDalInfrastructure(builder.Configuration)
     .AddDalRepositories()
-    .AddGrpcServices();
+    .AddGrpcServices(builder.Configuration);
 
 var app = builder.Build();
 
@@ -49,7 +49,6 @@ if (app.Environment.IsDevelopment())
 }
 app.UseMiddleware<ExceptionHandlerMiddleware>();
 app.MapControllers();
-app.MapGrpcService<DeliveryPriceCalculatorService>();
-app.MapGrpcReflectionService();
+app.MapGrpc();
 app.MigrateUp();
 app.Run();

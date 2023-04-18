@@ -1,9 +1,11 @@
 ﻿using Grpc.Core;
 using MediatR;
+using Microsoft.Extensions.Options;
 using Route256.Week5.Homework.PriceCalculator.Bll.Commands;
 using Route256.Week5.Homework.PriceCalculator.Bll.Exceptions;
 using Route256.Week5.Homework.PriceCalculator.Bll.Models;
 using Route256.Week5.Homework.PriceCalculator.Bll.Queries;
+using Route256.Week5.Homework.PriceCalculator.GrpcServices.Options;
 using Route256.Week5.Homework.PriceCalculator.GrpcServices.Validators;
 
 namespace Route256.Week5.Homework.PriceCalculator.GrpcServices.Services;
@@ -11,10 +13,12 @@ namespace Route256.Week5.Homework.PriceCalculator.GrpcServices.Services;
 public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPriceCalculatorBase
 {
     private readonly IMediator _mediator;
+    private readonly IOptions<GrpcDeliveryPriceCalculatorOptions> _options;
 
-    public DeliveryPriceCalculatorService(IMediator mediator)
+    public DeliveryPriceCalculatorService(IMediator mediator, IOptions<GrpcDeliveryPriceCalculatorOptions> options)
     {
         _mediator = mediator;
+        _options = options;
     }
 
     public override async Task<CalculationResponse> Calculate(CalculationRequest request, ServerCallContext context)
@@ -74,11 +78,12 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
         }
         catch (OneOrManyCalculationsNotFoundException)
         {
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "One or manu calculations not found"));
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "One or many calculations not found"));
         }
         catch (OneOrManyCalculationsBelongsToAnotherUserException)
         {
-            throw new RpcException(new Status(StatusCode.PermissionDenied, "One or manu belongs to another user"));
+            throw new RpcException(new Status(StatusCode.PermissionDenied,
+                "One or many calculations belongs to another user"));
         }
         catch (Exception exception)
         {
@@ -100,14 +105,13 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
                 new Status(StatusCode.InvalidArgument, validationResult.ToString()));
         }
 
-        const int take = 100;
-        int skip = 0;
+        var skip = 0;
         GetHistoryQueryResult result;
         do
         {
             var query = new GetCalculationHistoryQuery(
                 request.UserId,
-                take,
+                _options.Value.HistoryTake,
                 skip);
 
             try
@@ -128,7 +132,7 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
                 });
             }
 
-            skip += take;
+            skip += _options.Value.HistoryTake;
         } while (result.Items.Length != 0);
     }
 }
