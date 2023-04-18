@@ -1,6 +1,6 @@
 ﻿namespace Route256.Week5.Homework.PriceCalculator.GrpcClient;
 
-internal class Program
+internal static class Program
 {
     public static async Task Main(string[] args)
     {

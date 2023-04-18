@@ -89,10 +89,9 @@ public class ClientApp
             UserId = userId
         };
 
-        AsyncServerStreamingCall<GetHistoryResponse> stream;
         try
         {
-            stream = _client.GetHistory(request);
+            var stream = _client.GetHistory(request);
             await foreach (var getHistoryResponse in stream.ResponseStream.ReadAllAsync())
             {
                 var representation = JsonSerializer.Serialize(new
