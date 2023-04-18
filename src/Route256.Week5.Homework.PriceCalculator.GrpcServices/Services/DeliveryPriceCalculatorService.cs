@@ -135,4 +135,13 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
             skip += _options.Value.HistoryTake;
         } while (result.Items.Length != 0);
     }
+
+    public override async Task CalculateWithStreaming(IAsyncStreamReader<CalculationRequest> requestStream, IServerStreamWriter<CalculationResponse> responseStream,
+        ServerCallContext context)
+    {
+        await foreach (var calculationRequest in requestStream.ReadAllAsync())
+        {
+            await responseStream.WriteAsync(await Calculate(calculationRequest, context));
+        }
+    }
 }

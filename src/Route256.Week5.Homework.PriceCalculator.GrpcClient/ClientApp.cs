@@ -20,6 +20,7 @@ public class ClientApp : IConsoleApp
         _availableMethods = new Dictionary<string, Func<Task>>
         {
             {"Calculate", HandleCalculateCall},
+            {"CalculateWithStreaming", HandleCalculateWithStreamingCall},
             {"GetHistory", HandleGetHistoryCall},
             {"ClearHistory", HandleClearHistoryCall}
         };
@@ -49,6 +50,11 @@ public class ClientApp : IConsoleApp
                               " Для выхода из программы введите \"exit\"");
             exitCommand = Console.ReadLine() ?? string.Empty;
         } while (exitCommand != "exit");
+    }
+
+    private Task HandleCalculateWithStreamingCall()
+    {
+        return Task.CompletedTask;
     }
 
     private Task HandleCalculateCall()
