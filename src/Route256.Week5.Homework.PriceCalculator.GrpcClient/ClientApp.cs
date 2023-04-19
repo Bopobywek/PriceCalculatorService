@@ -76,28 +76,37 @@ public class ClientApp : IConsoleApp
 
         using var call = _client.CalculateWithStreaming();
         var readTask = PrintReceivedCalculations(call);
-
-        await foreach (var goodCalculationRequestModel in requests)
+        
+        try
         {
-            if (goodCalculationRequestModel is null)
+            await foreach (var goodCalculationRequestModel in requests)
             {
-                Console.WriteLine("Не удалось прочитать один из объектов");
-                continue;
-            }
-
-            var request = new GoodCalculationRequest
-            {
-                GoodId = goodCalculationRequestModel.GoodId,
-                Good = new Good
+                if (goodCalculationRequestModel is null)
                 {
-                    Width = goodCalculationRequestModel.Width,
-                    Height = goodCalculationRequestModel.Height,
-                    Length = goodCalculationRequestModel.Length,
-                    Weight = goodCalculationRequestModel.Weight
+                    Console.WriteLine("Не удалось прочитать один из объектов");
+                    continue;
                 }
-            };
 
-            await call.RequestStream.WriteAsync(request);
+                var request = new GoodCalculationRequest
+                {
+                    GoodId = goodCalculationRequestModel.GoodId,
+                    Good = new Good
+                    {
+                        Width = goodCalculationRequestModel.Width,
+                        Height = goodCalculationRequestModel.Height,
+                        Length = goodCalculationRequestModel.Length,
+                        Weight = goodCalculationRequestModel.Weight
+                    }
+                };
+
+                await call.RequestStream.WriteAsync(request);
+            }
+        }
+        catch (JsonException)
+        {
+            Console.WriteLine(
+                "Не удалось полностью прочитать json файл. Убедитесь, что у входного файла LineEndings = \\n");
+            return;
         }
 
         await call.RequestStream.CompleteAsync();
