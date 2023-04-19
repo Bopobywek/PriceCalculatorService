@@ -1,5 +1,4 @@
 using Route256.Week5.Homework.PriceCalculator.Bll.Models;
-using Route256.Week5.Homework.PriceCalculator.Dal.Entities;
 
 namespace Route256.Week5.Homework.PriceCalculator.Bll.Services.Interfaces;
 
@@ -21,12 +20,15 @@ public interface ICalculationService
         QueryCalculationFilter query,
         CancellationToken token);
 
-    Task<QueryCalculationModel[]> GetCalculation(
-        long[] calculationIds,
-        CancellationToken cancellationToken);
+    Task<QueryCalculationModel[]> QueryCalculations(
+        long[] calculationsIds,
+        CancellationToken token);
 
-    Task DeleteCalculationAndGoods(
-        long[] goodsIds,
-        long[] calculationIds,
-        CancellationToken cancellationToken);
+    Task ClearCalculationsHistory(
+        ClearCalculationsHistoryModel data,
+        CancellationToken token);
+
+    Task ClearCalculationsHistory(
+        long userId,
+        CancellationToken token);
 }

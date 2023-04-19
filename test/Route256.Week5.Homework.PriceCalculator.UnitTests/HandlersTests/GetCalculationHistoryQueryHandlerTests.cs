@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -28,8 +27,7 @@ public class GetCalculationHistoryQueryHandlerTests
         var filter = QueryCalculationFilterFaker.Generate()
             .WithUserId(userId)
             .WithLimit(command.Take)
-            .WithOffset(command.Skip)
-            .WithCalculationIds(command.CalculationIds);
+            .WithOffset(command.Skip);
 
         var builder = new GetCalculationHistoryHandlerBuilder();
         builder.CalculationService
@@ -56,4 +54,139 @@ public class GetCalculationHistoryQueryHandlerTests
             .Should().IntersectWith(queryModels.Select(x => x.TotalWeight));
     }
 
+    [Fact]
+    public async Task Handle_CalculationIdsPassed_Success()
+    {
+        // Arrange
+        var userId = Create.RandomId();
+
+        var queryModels = QueryCalculationModelFaker.Generate(10)
+            .Select(x => x.WithUserId(userId))
+            .ToArray();
+
+        var calculationIds = Enumerable.Range(0, 10)
+            .Where(x => x % 3 == 0)
+            .Select(x => queryModels[x].Id)
+            .ToArray();
+
+        var command = GetCalculationHistoryQueryFaker.Generate()
+            .WithUserId(userId)
+            .WithCalculationIds(calculationIds);
+
+        var filter = QueryCalculationFilterFaker.Generate()
+            .WithUserId(userId)
+            .WithLimit(command.Take)
+            .WithOffset(command.Skip);
+
+        var builder = new GetCalculationHistoryHandlerBuilder();
+        builder.CalculationService
+            .SetupQueryCalculations(queryModels);
+
+        var handler = builder.Build();
+
+        // Act
+        var result = await handler.Handle(command, default);
+
+        // Assert
+        handler.CalculationService
+            .VerifyQueryCalculationsWasCalledOnce(filter);
+
+        handler.VerifyNoOtherCalls();
+
+        result.Should().NotBeNull();
+        result.Items.Should().HaveCount(calculationIds.Length);
+    }
+    
+    [Fact]
+    public async Task Handle_NotAllCalculationIdsWrong_Success()
+    {
+        // Arrange
+        var userId = Create.RandomId();
+
+        var queryModels = QueryCalculationModelFaker.Generate(10)
+            .Select(x => x.WithUserId(userId))
+            .ToArray();
+        
+        var wrongCalculationIds = Enumerable.Range(0, 2)
+            .Select(_ => Create.RandomId())
+            .Except(queryModels.Select(x => x.Id))
+            .ToArray();
+        
+        var existingCalculationIds = Enumerable.Range(0, 10)
+            .Where(x => x % 3 == 0)
+            .Select(x => queryModels[x].Id)
+            .ToArray();
+
+        var calculationIds = wrongCalculationIds.Union(existingCalculationIds).ToArray();
+        
+        var command = GetCalculationHistoryQueryFaker.Generate()
+            .WithUserId(userId)
+            .WithCalculationIds(calculationIds);
+
+        var filter = QueryCalculationFilterFaker.Generate()
+            .WithUserId(userId)
+            .WithLimit(command.Take)
+            .WithOffset(command.Skip);
+
+        var builder = new GetCalculationHistoryHandlerBuilder();
+        builder.CalculationService
+            .SetupQueryCalculations(queryModels);
+
+        var handler = builder.Build();
+
+        // Act
+        var result = await handler.Handle(command, default);
+
+        // Assert
+        handler.CalculationService
+            .VerifyQueryCalculationsWasCalledOnce(filter);
+
+        handler.VerifyNoOtherCalls();
+
+        result.Should().NotBeNull();
+        result.Items.Should().HaveCount(existingCalculationIds.Length);
+    }
+    
+    [Fact]
+    public async Task Handle_WrongCalculationIdsPassed_ShouldReturnEmptyArray()
+    {
+        // Arrange
+        var userId = Create.RandomId();
+
+        var queryModels = QueryCalculationModelFaker.Generate(10)
+            .Select(x => x.WithUserId(userId))
+            .ToArray();
+        
+        var wrongCalculationIds = Enumerable.Range(0, 10)
+            .Select(_ => Create.RandomId())
+            .Except(queryModels.Select(x => x.Id))
+            .ToArray();
+
+        var command = GetCalculationHistoryQueryFaker.Generate()
+            .WithUserId(userId)
+            .WithCalculationIds(wrongCalculationIds);
+
+        var filter = QueryCalculationFilterFaker.Generate()
+            .WithUserId(userId)
+            .WithLimit(command.Take)
+            .WithOffset(command.Skip);
+
+        var builder = new GetCalculationHistoryHandlerBuilder();
+        builder.CalculationService
+            .SetupQueryCalculations(queryModels);
+
+        var handler = builder.Build();
+
+        // Act
+        var result = await handler.Handle(command, default);
+
+        // Assert
+        handler.CalculationService
+            .VerifyQueryCalculationsWasCalledOnce(filter);
+
+        handler.VerifyNoOtherCalls();
+
+        result.Should().NotBeNull();
+        result.Items.Should().BeEmpty();
+    }
 }

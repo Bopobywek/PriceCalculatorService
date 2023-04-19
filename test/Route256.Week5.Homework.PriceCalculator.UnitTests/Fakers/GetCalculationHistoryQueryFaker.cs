@@ -1,3 +1,4 @@
+using System;
 using AutoBogus;
 using Bogus;
 using Route256.Week5.Homework.PriceCalculator.Bll.Queries;
@@ -17,7 +18,7 @@ public static class GetCalculationHistoryQueryFaker
     {
         lock (Lock)
         {
-            return Faker.Generate();
+            return Faker.Generate() with {CalculationIds = Array.Empty<long>()};
         }
     }
     
@@ -26,6 +27,13 @@ public static class GetCalculationHistoryQueryFaker
         long userId)
     {
         return src with { UserId = userId };
+    }
+    
+    public static GetCalculationHistoryQuery WithCalculationIds(
+        this GetCalculationHistoryQuery src, 
+        long[] calculationIds)
+    {
+        return src with { CalculationIds = calculationIds };
     }
     
     public static GetCalculationHistoryQuery WithLimit(

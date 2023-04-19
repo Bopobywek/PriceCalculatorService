@@ -67,7 +67,7 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
             throw new RpcException(new Status(StatusCode.InvalidArgument, validationResult.ToString()));
         }
 
-        var query = new ClearHistoryCommand(
+        var query = new ClearCalculationsHistoryCommand(
             request.UserId,
             request.CalculationIds.ToArray()
         );
@@ -112,7 +112,8 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
             var query = new GetCalculationHistoryQuery(
                 request.UserId,
                 _options.Value.HistoryTake,
-                skip);
+                skip,
+                Array.Empty<long>());
 
             try
             {
