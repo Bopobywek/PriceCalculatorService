@@ -80,7 +80,7 @@ public class DeliveryPricesController : ControllerBase
         ClearHistoryRequest request,
         CancellationToken ct)
     {
-        var query = new ClearHistoryCommand(
+        var query = new ClearCalculationsHistoryCommand(
             request.UserId,
             request.CalculationIds
         );

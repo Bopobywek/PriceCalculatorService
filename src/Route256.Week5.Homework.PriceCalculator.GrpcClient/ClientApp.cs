@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Globalization;
 using System.Text.Json;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -12,7 +13,7 @@ public class ClientApp : IConsoleApp
 {
     private readonly DeliveryPriceCalculator.DeliveryPriceCalculatorClient _client;
     private readonly Dictionary<string, Func<Task>> _availableMethods;
-    
+
     public ClientApp(IOptions<ClientOptions> options)
     {
         var channel = GrpcChannel.ForAddress(options.Value.ServiceEndpoint);
@@ -44,7 +45,7 @@ public class ClientApp : IConsoleApp
             }
 
             await _availableMethods[command].Invoke();
-            
+
             Console.WriteLine("Чтобы продолжить работу с программой нажмите \"Enter\"." +
                               " Для выхода из программы введите \"exit\"");
             exitCommand = Console.ReadLine() ?? string.Empty;
@@ -78,7 +79,7 @@ public class ClientApp : IConsoleApp
 
         Console.WriteLine(
             $"Результат вызова метода Calculate: {{ CalculationId: {result.CalculationId}," +
-            $" Price: {DecimalValue.ToDecimal(result.Price)} }}\n");
+            $" Price: {DecimalValue.ToDecimal(result.Price).ToString(CultureInfo.InvariantCulture)} }}\n");
 
         return Task.CompletedTask;
     }
@@ -104,6 +105,7 @@ public class ClientApp : IConsoleApp
                 });
                 Console.WriteLine($"Получена запись: {representation}");
             }
+
             Console.WriteLine();
         }
         catch (RpcException exception)
@@ -131,7 +133,6 @@ public class ClientApp : IConsoleApp
         {
             Console.WriteLine($"Ошибка. Status: {exception.StatusCode}. Сообщение: {exception.Status.Detail}");
             return Task.CompletedTask;
-
         }
 
         Console.WriteLine("Запрос успешно выполнен.");
@@ -180,7 +181,8 @@ public class ClientApp : IConsoleApp
         var converter = TypeDescriptor.GetConverter(typeof(T));
         try
         {
-            value = (T) (converter.ConvertFromString(s) ?? throw new InvalidOperationException());
+            value = (T) (converter.ConvertFromString(default, CultureInfo.InvariantCulture, s) ??
+                         throw new InvalidOperationException());
             return true;
         }
         catch

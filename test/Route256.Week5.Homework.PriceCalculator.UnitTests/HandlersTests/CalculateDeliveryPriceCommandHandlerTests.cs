@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Route256.Week5.Homework.PriceCalculator.Bll.Exceptions;
 using Route256.Week5.Homework.PriceCalculator.Bll.Models;
+using Route256.Week5.Homework.PriceCalculator.Bll.Handlers;
 using Route256.Week5.Homework.PriceCalculator.UnitTests.Builders;
 using Route256.Week5.Homework.PriceCalculator.UnitTests.Extensions;
 using Route256.Week5.Homework.PriceCalculator.UnitTests.Fakers;
@@ -24,7 +25,7 @@ public class CalculateDeliveryPriceCommandHandlerTests
         var command = CalculateDeliveryPriceCommandFaker.Generate()
             .WithUserId(userId);
 
-        var calculationModel = CalculationModelFaker.Generate()
+        var calculationModel = SaveCalculationModelFaker.Generate()
             .Single()
             .WithUserId(userId)
             .WithGoods(command.Goods);

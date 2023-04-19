@@ -7,12 +7,12 @@ namespace Route256.Week5.Homework.PriceCalculator.UnitTests.Fakers;
 public static class CalculationHistoryQueryModelFaker
 {
     private static readonly object Lock = new();
-
+    
     private static readonly Faker<CalculationHistoryQueryModel> Faker = new AutoFaker<CalculationHistoryQueryModel>()
         .RuleFor(x => x.UserId, f => f.Random.Long(0L))
         .RuleFor(x => x.Limit, f => f.Random.Int(1, 5))
         .RuleFor(x => x.Offset, f => f.Random.Int(0, 5));
- 
+    
     public static CalculationHistoryQueryModel Generate()
     {
         lock (Lock)
@@ -23,7 +23,7 @@ public static class CalculationHistoryQueryModelFaker
     
     public static CalculationHistoryQueryModel WithUserId(
         this CalculationHistoryQueryModel src, 
-        long? userId)
+        long userId)
     {
         return src with { UserId = userId };
     }
@@ -40,12 +40,5 @@ public static class CalculationHistoryQueryModelFaker
         int offset)
     {
         return src with { Offset = offset };
-    }
-
-    public static CalculationHistoryQueryModel WithIds(
-        this CalculationHistoryQueryModel src,
-        long[]? Ids)
-    {
-        return src with { CalculationIds = Ids };
     }
 }

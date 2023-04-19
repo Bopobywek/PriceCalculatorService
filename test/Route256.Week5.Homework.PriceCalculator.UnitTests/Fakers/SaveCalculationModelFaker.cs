@@ -6,7 +6,7 @@ using Route256.Week5.Homework.PriceCalculator.Bll.Models;
 
 namespace Route256.Week5.Homework.PriceCalculator.UnitTests.Fakers;
 
-public static class CalculationModelFaker
+public static class SaveCalculationModelFaker
 {
     private static readonly object Lock = new();
     

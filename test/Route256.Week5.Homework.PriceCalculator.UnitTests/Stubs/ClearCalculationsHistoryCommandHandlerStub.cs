@@ -1,24 +1,18 @@
-using Moq;
-using Route256.Week5.Homework.PriceCalculator.Bll.Commands;
+﻿using Moq;
 using Route256.Week5.Homework.PriceCalculator.Bll.Handlers;
 using Route256.Week5.Homework.PriceCalculator.Bll.Services.Interfaces;
 
 namespace Route256.Week5.Homework.PriceCalculator.UnitTests.Stubs;
 
-public class  CalculateDeliveryPriceCommandHandlerStub : CalculateDeliveryPriceCommandHandler
+public class ClearCalculationsHistoryCommandHandlerStub : ClearCalculationsHistoryCommandHandler
 {
     public Mock<ICalculationService> CalculationService { get; }
     
-    public CalculateDeliveryPriceCommandHandlerStub(
+    public ClearCalculationsHistoryCommandHandlerStub(
         Mock<ICalculationService> calculationService) 
         : base(
             calculationService.Object)
     {
         CalculationService = calculationService;
-    }
-    
-    public void VerifyNoOtherCalls()
-    {
-        CalculationService.VerifyNoOtherCalls();
     }
 }

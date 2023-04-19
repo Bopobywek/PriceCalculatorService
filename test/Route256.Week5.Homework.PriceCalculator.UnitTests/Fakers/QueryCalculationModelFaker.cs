@@ -17,7 +17,7 @@ public static class QueryCalculationModelFaker
     {
         lock (Lock)
         {
-            return Enumerable.Repeat(Faker.Generate(), count)
+            return Enumerable.Range(0, count).Select(x => Faker.Generate())
                 .ToArray();
         }
     }
@@ -27,5 +27,12 @@ public static class QueryCalculationModelFaker
         long userId)
     {
         return src with { UserId = userId };
+    }
+    
+    public static QueryCalculationModel[] WithUserId(
+        this QueryCalculationModel[] src, 
+        long userId)
+    {
+        return src.Select(x => x.WithUserId(userId)).ToArray();
     }
 }

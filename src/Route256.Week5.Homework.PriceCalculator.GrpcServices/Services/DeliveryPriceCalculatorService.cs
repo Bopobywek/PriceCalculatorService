@@ -67,7 +67,7 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
             throw new RpcException(new Status(StatusCode.InvalidArgument, validationResult.ToString()));
         }
 
-        var query = new ClearHistoryCommand(
+        var query = new ClearCalculationsHistoryCommand(
             request.UserId,
             request.CalculationIds.ToArray()
         );
