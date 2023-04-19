@@ -1,4 +1,3 @@
-using System.Text;
 using Dapper;
 using Microsoft.Extensions.Options;
 using Route256.Week5.Homework.PriceCalculator.Dal.Entities;
@@ -16,7 +15,7 @@ public class CalculationRepository : BaseRepository, ICalculationRepository
     }
 
     public async Task<long[]> Add(
-        CalculationEntityV1[] entityV1, 
+        CalculationEntityV1[] entityV1,
         CancellationToken token)
     {
         const string sqlQuery = @"
@@ -30,14 +29,14 @@ returning id;
         {
             Calculations = entityV1
         };
-        
+
         await using var connection = await GetAndOpenConnection();
         var ids = await connection.QueryAsync<long>(
             new CommandDefinition(
                 sqlQuery,
                 sqlQueryParams,
                 cancellationToken: token));
-        
+
         return ids
             .ToArray();
     }
@@ -46,31 +45,16 @@ returning id;
         CalculationHistoryQueryModel query,
         CancellationToken token)
     {
-
-        if (query.UserId == null && query.CalculationIds == null)
-            throw new ArgumentException($"{nameof(query.UserId)} or {nameof(query.CalculationIds)} necessarily", nameof(query));
-
-        if (query.UserId == null && query.CalculationIds != null && !query.CalculationIds.Any())
-            throw new ArgumentException($"{nameof(query.CalculationIds)} shouldn't be empty", nameof(query));
-
-        var conditions = new List<string>();
-
-        if (query.UserId != null)
-            conditions.Add("user_id = @UserId");
-        if (query.CalculationIds != null && query.CalculationIds.Any())
-            conditions.Add("id = any(@CalculationIds)");
-
-        var sqlQuery = @$"
- select 
-     id,
-     user_id,
-     good_ids,
-     total_volume,
-     total_weight,
-     price,
-     at
- from calculations
- where {string.Join(" and ", conditions)}
+        const string sqlQuery = @"
+select id
+     , user_id
+     , good_ids
+     , total_volume
+     , total_weight
+     , price
+     , at
+  from calculations
+ where user_id = @UserId
  order by at desc
  limit @Limit offset @Offset
 ";
@@ -78,7 +62,6 @@ returning id;
         var sqlQueryParams = new
         {
             UserId = query.UserId,
-            CalculationIds = query.CalculationIds,
             Limit = query.Limit,
             Offset = query.Offset
         };
@@ -89,27 +72,76 @@ returning id;
                 sqlQuery,
                 sqlQueryParams,
                 cancellationToken: token));
-        
+
         return calculations
             .ToArray();
     }
 
-    public async Task Delete(long[] calculationIds, CancellationToken cancellationToken)
+    public async Task<CalculationEntityV1[]> Query(long[] calculationsIds, CancellationToken token)
     {
         const string sqlQuery = @"
- delete from calculations where id = any(@CalculationIds);
-";
-        await using var connection = await GetAndOpenConnection();
-
+select id,
+       user_id,
+       good_ids,
+       total_volume,
+       total_weight,
+       price,
+       at
+from calculations
+where id = ANY(@ids)
+order by at desc";
+        
         var sqlQueryParams = new
         {
-            CalculationIds = calculationIds
+            ids = calculationsIds
         };
-
-        await connection.QueryAsync(
+        
+        await using var connection = await GetAndOpenConnection();
+        var calculations = await connection.QueryAsync<CalculationEntityV1>(
             new CommandDefinition(
                 sqlQuery,
                 sqlQueryParams,
-                cancellationToken: cancellationToken));
+                cancellationToken: token));
+
+        return calculations
+            .ToArray();
+    }
+
+    public async Task ClearCalculations(long[] calculationsIds, CancellationToken token)
+    {
+        const string sqlQuery = @"
+delete from calculations
+where id = ANY(@ids)
+";
+        var sqlQueryParams = new
+        {
+            ids = calculationsIds
+        };
+        
+        await using var connection = await GetAndOpenConnection();
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                sqlQuery,
+                sqlQueryParams,
+                cancellationToken: token));
+    }
+
+    public async Task ClearCalculations(long userId, CancellationToken token)
+    {
+        const string sqlQuery = @"
+delete from calculations
+where user_id = @UserId
+";
+        var sqlQueryParams = new
+        {
+            UserId = userId
+        };
+        
+        await using var connection = await GetAndOpenConnection();
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                sqlQuery,
+                sqlQueryParams,
+                cancellationToken: token));
     }
 }

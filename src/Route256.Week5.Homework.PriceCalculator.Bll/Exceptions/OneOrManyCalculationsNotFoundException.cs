@@ -2,7 +2,8 @@
 
 public class OneOrManyCalculationsNotFoundException : Exception
 {
-    public OneOrManyCalculationsNotFoundException() : base("One or more calculations not found")
+    public OneOrManyCalculationsNotFoundException() : base("")
     {
+        
     }
 }

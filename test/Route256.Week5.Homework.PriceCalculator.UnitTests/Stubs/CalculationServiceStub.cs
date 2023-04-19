@@ -19,7 +19,6 @@ public class CalculationServiceStub : CalculationService
         CalculationRepository = calculationRepository;
         GoodsRepository = goodsRepository;
     }
-    
     public void VerifyNoOtherCalls()
     {
         CalculationRepository.VerifyNoOtherCalls();

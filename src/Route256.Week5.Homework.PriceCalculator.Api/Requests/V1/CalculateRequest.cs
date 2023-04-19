@@ -1,7 +1,7 @@
 namespace Route256.Week5.Homework.PriceCalculator.Api.Requests.V1;
 
 /// <summary>
-/// Товары, цену транспортировки которых нужно рассчитать
+/// Товары. чью цену транспортировки нужно расчитать
 /// </summary>
 public record CalculateRequest(
     long UserId,

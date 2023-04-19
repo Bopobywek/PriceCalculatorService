@@ -1,21 +1,18 @@
 using AutoBogus;
 using Bogus;
 using Route256.Week5.Homework.PriceCalculator.Bll.Models;
-using System.Linq;
 
 namespace Route256.Week5.Homework.PriceCalculator.UnitTests.Fakers;
 
 public static class QueryCalculationFilterFaker
 {
     private static readonly object Lock = new();
-
+    
     private static readonly Faker<QueryCalculationFilter> Faker = new AutoFaker<QueryCalculationFilter>()
         .RuleFor(x => x.UserId, f => f.Random.Long(0L))
         .RuleFor(x => x.Limit, f => f.Random.Int(1, 5))
-        .RuleFor(x => x.Offset, f => f.Random.Int(0, 5))
-        .RuleFor(x => x.CalculationIds, f => f.Random.ArrayElements(new long[] {1,2}));
-
-
+        .RuleFor(x => x.Offset, f => f.Random.Int(0, 5));
+    
     public static QueryCalculationFilter Generate()
     {
         lock (Lock)
@@ -26,7 +23,7 @@ public static class QueryCalculationFilterFaker
     
     public static QueryCalculationFilter WithUserId(
         this QueryCalculationFilter src, 
-        long? userId)
+        long userId)
     {
         return src with { UserId = userId };
     }
@@ -43,12 +40,5 @@ public static class QueryCalculationFilterFaker
         int offset)
     {
         return src with { Offset = offset };
-    }
-
-    public static QueryCalculationFilter WithCalculationIds(
-        this QueryCalculationFilter src,
-        long[]? calculationIds)
-    {
-        return src with { CalculationIds = calculationIds };
     }
 }

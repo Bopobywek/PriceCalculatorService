@@ -1,4 +1,3 @@
-﻿using Route256.Week5.Homework.PriceCalculator.Bll.Exceptions;
 using Route256.Week5.Homework.PriceCalculator.Bll.Models;
 using Route256.Week5.Homework.PriceCalculator.Bll.Services.Interfaces;
 using Route256.Week5.Homework.PriceCalculator.Dal.Entities;
@@ -22,7 +21,7 @@ public class CalculationService : ICalculationService
         _calculationRepository = calculationRepository;
         _goodsRepository = goodsRepository;
     }
-
+    
     public async Task<long> SaveCalculation(
         SaveCalculationModel data,
         CancellationToken cancellationToken)
@@ -37,7 +36,7 @@ public class CalculationService : ICalculationService
                 Width = x.Width
             })
             .ToArray();
-
+        
         var calculation = new CalculationEntityV1
         {
             UserId = data.UserId,
@@ -46,7 +45,7 @@ public class CalculationService : ICalculationService
             Price = data.Price,
             At = DateTimeOffset.UtcNow
         };
-
+        
         using var transaction = _calculationRepository.CreateTransactionScope();
         var goodIds = await _goodsRepository.Add(goods, cancellationToken);
 
@@ -56,7 +55,7 @@ public class CalculationService : ICalculationService
 
         return calculationIds.Single();
     }
-
+    
     public decimal CalculatePriceByVolume(
         GoodModel[] goods,
         out double volume)
@@ -64,9 +63,9 @@ public class CalculationService : ICalculationService
         volume = goods
             .Sum(x => x.Length * x.Width * x.Height);
 
-        return (decimal) volume * VolumeToPriceRatio;
+        return (decimal)volume * VolumeToPriceRatio;
     }
-
+    
     public decimal CalculatePriceByWeight(
         GoodModel[] goods,
         out double weight)
@@ -74,20 +73,17 @@ public class CalculationService : ICalculationService
         weight = goods
             .Sum(x => x.Weight);
 
-        return (decimal) weight * WeightToPriceRatio;
+        return (decimal)weight * WeightToPriceRatio;
     }
 
     public async Task<QueryCalculationModel[]> QueryCalculations(
         QueryCalculationFilter query,
         CancellationToken token)
     {
-        var result = await _calculationRepository.Query(
-            new CalculationHistoryQueryModel(
+        var result = await _calculationRepository.Query(new CalculationHistoryQueryModel(
                 query.UserId,
                 query.Limit,
-                query.Offset,
-                query.CalculationIds
-            ),
+                query.Offset),
             token);
 
         return result
@@ -101,23 +97,12 @@ public class CalculationService : ICalculationService
             .ToArray();
     }
 
-    /// <summary>
-    /// Получить расчеты по идентификаторам
-    /// </summary>
-    /// <param name="calculationIds"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    public async Task<QueryCalculationModel[]> GetCalculation(long[] calculationIds,
-        CancellationToken cancellationToken)
+    public async Task<QueryCalculationModel[]> QueryCalculations(
+        long[] calculationsIds,
+        CancellationToken token)
     {
-        var result = await _calculationRepository.Query(
-            new CalculationHistoryQueryModel(
-                UserId: null,
-                Limit: calculationIds.Length,
-                Offset: 0,
-                CalculationIds: calculationIds),
-            cancellationToken
-        );
+        var result = await _calculationRepository.Query(calculationsIds, token);
+
         return result
             .Select(x => new QueryCalculationModel(
                 x.Id,
@@ -129,32 +114,27 @@ public class CalculationService : ICalculationService
             .ToArray();
     }
 
-    /// <summary>
-    /// Удалить расчеты пользователя и товары 
-    /// </summary>
-    /// <param name="goodsIds">список товаров</param>
-    /// <param name="calculationIds">список расчетов</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    /// <exception cref="OneOrManyCalculationsBelongsToAnotherUserException">пользователь не явлется держателем данных</exception>
-    /// <exception cref="OneOrManyCalculationsNotFoundException">некоторые расчеты не найдены</exception>
-    public async Task DeleteCalculationAndGoods(
-        long[] calculationIds,
-        long[] goodsIds,
-        CancellationToken cancellationToken
-    )
+    public async Task ClearCalculationsHistory(
+        ClearCalculationsHistoryModel data,
+        CancellationToken token)
     {
         using var transaction = _calculationRepository.CreateTransactionScope();
-
-        await _calculationRepository.Delete(
-            calculationIds,
-            cancellationToken);
-
-        await _goodsRepository.Delete(
-            goodsIds,
-            cancellationToken);
+        
+        await _calculationRepository.ClearCalculations(data.CalculationsIds, token);
+        await _goodsRepository.ClearGoods(data.GoodsIds, token);
 
         transaction.Complete();
     }
 
+    public async Task ClearCalculationsHistory(
+        long userId,
+        CancellationToken token)
+    {
+        using var transaction = _calculationRepository.CreateTransactionScope();
+        
+        await _calculationRepository.ClearCalculations(userId, token);
+        await _goodsRepository.ClearGoods(userId, token);
+
+        transaction.Complete();
+    }
 }
