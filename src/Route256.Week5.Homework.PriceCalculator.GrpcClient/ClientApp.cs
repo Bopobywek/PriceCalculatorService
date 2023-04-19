@@ -81,6 +81,7 @@ public class ClientApp : IConsoleApp
         {
             if (goodCalculationRequestModel is null)
             {
+                Console.WriteLine("Не удалось прочитать один из объектов");
                 continue;
             }
 
@@ -106,7 +107,7 @@ public class ClientApp : IConsoleApp
     private Task HandleCalculateCall()
     {
         var userId = GetParameter<long>("UserId");
-        var goods = GetRepeated(GetGood);
+        var goods = GetRepeated(GetGood, "Goods");
 
         var request = new CalculationRequest
         {
@@ -168,7 +169,8 @@ public class ClientApp : IConsoleApp
     private Task HandleClearHistoryCall()
     {
         var userId = GetParameter<long>("UserId");
-        var calculationIds = GetRepeated(() => GetParameter<long>("CalculationId"));
+        var calculationIds = GetRepeated(() => GetParameter<long>("CalculationId"),
+            "CalculationIds");
 
         var request = new ClearHistoryRequest
         {
@@ -191,11 +193,12 @@ public class ClientApp : IConsoleApp
         return Task.CompletedTask;
     }
 
-    private T[] GetRepeated<T>(Func<T> entityGetter)
+    private T[] GetRepeated<T>(Func<T> entityGetter, string parameterName)
     {
         var repeated = new List<T>();
-        const string inputMessage = "Ввод нескольких объектов || Для создания объекта введите \"create\"." +
-                                    "\nИначе, чтобы сформировать список введенных объектов, введите \"stop\": ";
+        string inputMessage = $"Ввод нескольких объектов для {parameterName} ||" +
+                              $" Для создания объекта введите \"create\".\nИначе," +
+                              $" чтобы сформировать список введенных объектов, введите \"stop\": ";
         Console.Write(inputMessage);
         var line = Console.ReadLine();
         while (line != "stop")
