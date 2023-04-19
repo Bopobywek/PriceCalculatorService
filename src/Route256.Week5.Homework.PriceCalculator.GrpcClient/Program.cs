@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Route256.Week5.Homework.PriceCalculator.GrpcClient.Interfaces;
 using Route256.Week5.Homework.PriceCalculator.GrpcClient.Options;
 
@@ -21,6 +20,7 @@ internal static class Program
         var serviceCollection = new ServiceCollection();
         serviceCollection
             .AddTransient<ClientApp>()
+            .AddTransient<IContext, Context>()
             .Configure<ClientOptions>(configuration.GetSection("ClientOptions"));
         
         var serviceProvider = serviceCollection.BuildServiceProvider();

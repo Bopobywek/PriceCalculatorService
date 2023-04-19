@@ -1,20 +1,24 @@
 ﻿using System.ComponentModel;
+using System.Globalization;
 using System.Text.Json;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Options;
 using Route256.Week5.Homework.PriceCalculator.GrpcClient.Interfaces;
+using Route256.Week5.Homework.PriceCalculator.GrpcClient.Models;
 using Route256.Week5.Homework.PriceCalculator.GrpcClient.Options;
 
 namespace Route256.Week5.Homework.PriceCalculator.GrpcClient;
 
 public class ClientApp : IConsoleApp
 {
+    private readonly IContext _context;
     private readonly DeliveryPriceCalculator.DeliveryPriceCalculatorClient _client;
     private readonly Dictionary<string, Func<Task>> _availableMethods;
-    
-    public ClientApp(IOptions<ClientOptions> options)
+
+    public ClientApp(IOptions<ClientOptions> options, IContext context)
     {
+        _context = context;
         var channel = GrpcChannel.ForAddress(options.Value.ServiceEndpoint);
         _client = new DeliveryPriceCalculator.DeliveryPriceCalculatorClient(channel);
         _availableMethods = new Dictionary<string, Func<Task>>
@@ -45,16 +49,58 @@ public class ClientApp : IConsoleApp
             }
 
             await _availableMethods[command].Invoke();
-            
+
             Console.WriteLine("Чтобы продолжить работу с программой нажмите \"Enter\"." +
                               " Для выхода из программы введите \"exit\"");
             exitCommand = Console.ReadLine() ?? string.Empty;
         } while (exitCommand != "exit");
     }
 
-    private Task HandleCalculateWithStreamingCall()
+    private async Task PrintReceivedCalculations(
+        AsyncDuplexStreamingCall<GoodCalculationRequest, GoodCalculationResponse> call)
     {
-        return Task.CompletedTask;
+        await foreach (var response in call.ResponseStream.ReadAllAsync())
+        {
+            Console.WriteLine(
+                $"Получен результат от сервера: {{ GoodId: {response.GoodId}," +
+                $" Price: {DecimalValue.ToDecimal(response.Price).ToString(CultureInfo.InvariantCulture)} }} ");
+        }
+    }
+
+    private async Task HandleCalculateWithStreamingCall()
+    {
+        var path = GetPath();
+        await using var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read);
+
+        var requests = JsonSerializer.DeserializeAsyncEnumerable<GoodCalculationRequestModel>(fileStream);
+
+        using var call = _client.CalculateWithStreaming();
+        var readTask = PrintReceivedCalculations(call);
+
+        await foreach (var goodCalculationRequestModel in requests)
+        {
+            if (goodCalculationRequestModel is null)
+            {
+                continue;
+            }
+
+            var request = new GoodCalculationRequest
+            {
+                GoodId = goodCalculationRequestModel.GoodId,
+                Good = new Good
+                {
+                    Width = goodCalculationRequestModel.Width,
+                    Height = goodCalculationRequestModel.Height,
+                    Length = goodCalculationRequestModel.Length,
+                    Weight = goodCalculationRequestModel.Weight
+                }
+            };
+
+            await call.RequestStream.WriteAsync(request);
+        }
+
+        await call.RequestStream.CompleteAsync();
+        await readTask;
     }
 
     private Task HandleCalculateCall()
@@ -84,7 +130,7 @@ public class ClientApp : IConsoleApp
 
         Console.WriteLine(
             $"Результат вызова метода Calculate: {{ CalculationId: {result.CalculationId}," +
-            $" Price: {DecimalValue.ToDecimal(result.Price)} }}\n");
+            $" Price: {DecimalValue.ToDecimal(result.Price).ToString(CultureInfo.InvariantCulture)} }}\n");
 
         return Task.CompletedTask;
     }
@@ -108,8 +154,9 @@ public class ClientApp : IConsoleApp
                     getHistoryResponse.Cargo,
                     Price = DecimalValue.ToDecimal(getHistoryResponse.Price)
                 });
-                Console.WriteLine($"Получена запись: {representation}");
+                Console.WriteLine($"Получена результат от сервера: {representation}");
             }
+
             Console.WriteLine();
         }
         catch (RpcException exception)
@@ -137,7 +184,6 @@ public class ClientApp : IConsoleApp
         {
             Console.WriteLine($"Ошибка. Status: {exception.StatusCode}. Сообщение: {exception.Status.Detail}");
             return Task.CompletedTask;
-
         }
 
         Console.WriteLine("Запрос успешно выполнен.");
@@ -186,7 +232,8 @@ public class ClientApp : IConsoleApp
         var converter = TypeDescriptor.GetConverter(typeof(T));
         try
         {
-            value = (T) (converter.ConvertFromString(s) ?? throw new InvalidOperationException());
+            value = (T) (converter.ConvertFromString(default, CultureInfo.InvariantCulture, s) ??
+                         throw new InvalidOperationException());
             return true;
         }
         catch
@@ -208,5 +255,37 @@ public class ClientApp : IConsoleApp
         }
 
         return value;
+    }
+
+    private string GetPath()
+    {
+        const string inputMessage = "Укажите путь к json-файлу, содержащему данные запросов," +
+                                    " относительно текущей рабочей директории";
+
+        string path;
+        bool isFirstAttempt = true;
+        do
+        {
+            if (!isFirstAttempt)
+            {
+                Console.WriteLine("Указанный путь либо не существует, либо ведет к файлу.");
+            }
+
+            Console.WriteLine($"{inputMessage}\nCurrent working directory: {_context.GetProjectDirectory()}");
+            Console.Write(">> ");
+
+            var relativePath = Console.ReadLine();
+            path = Path.Combine(_context.GetProjectDirectory(), relativePath ?? string.Empty);
+            isFirstAttempt = false;
+        } while (!File.Exists(path) || !IsFile(path));
+
+
+        return path;
+    }
+
+    private bool IsFile(string path)
+    {
+        var attributes = File.GetAttributes(path);
+        return !attributes.HasFlag(FileAttributes.Directory);
     }
 }

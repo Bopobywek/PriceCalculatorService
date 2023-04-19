@@ -136,12 +136,27 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
         } while (result.Items.Length != 0);
     }
 
-    public override async Task CalculateWithStreaming(IAsyncStreamReader<CalculationRequest> requestStream, IServerStreamWriter<CalculationResponse> responseStream,
+    public override async Task CalculateWithStreaming(IAsyncStreamReader<GoodCalculationRequest> requestStream, IServerStreamWriter<GoodCalculationResponse> responseStream,
         ServerCallContext context)
     {
         await foreach (var calculationRequest in requestStream.ReadAllAsync())
         {
-            await responseStream.WriteAsync(await Calculate(calculationRequest, context));
+            var model = new GoodModel(
+                calculationRequest.Good.Height,
+                calculationRequest.Good.Length,
+                calculationRequest.Good.Width,
+                calculationRequest.Good.Weight);
+            var command = new CalculateGoodDeliveryPriceCommand(model);
+            
+            var result = await _mediator.Send(command, context.CancellationToken);
+
+            var response = new GoodCalculationResponse
+            {
+                GoodId = calculationRequest.GoodId,
+                Price = DecimalValue.FromDecimal(result.Price)
+            };
+            
+            await responseStream.WriteAsync(response);
         }
     }
 }
