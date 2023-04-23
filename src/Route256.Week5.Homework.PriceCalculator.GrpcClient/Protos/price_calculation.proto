@@ -9,44 +9,44 @@ service DeliveryPriceCalculator {
 }
 
 message GetHistoryResponse {
-  CargoResponse Cargo = 1;
-  DecimalValue Price = 2;
+  CargoResponse cargo = 1;
+  DecimalValue price = 2;
 }
 
 message CargoResponse {
-  double Volume = 1;
-  double Weight = 2;
-  repeated int64 GoodIds = 3;
+  double volume = 1;
+  double weight = 2;
+  repeated int64 good_ids = 3;
 }
 
 message GetHistoryRequest {
-  int64 UserId = 1;
+  int64 user_id = 1;
 }
 
 message ClearHistoryResponse {
-  
+
 }
 
 message ClearHistoryRequest {
-  int64 UserId = 1;
-  repeated int64 CalculationIds = 2;
+  int64 user_id = 1;
+  repeated int64 calculation_ids = 2;
 }
 
 message CalculationRequest {
-  int64 UserId = 1;
-  repeated Good Goods = 2;
+  int64 user_id = 1;
+  repeated Good goods = 2;
 }
 
 message Good {
-  double Height = 1;
-  double Length = 2;
-  double Width = 3;
-  double Weight = 4;
+  double height = 1;
+  double length = 2;
+  double width = 3;
+  double weight = 4;
 }
 
 message CalculationResponse {
-  int64 CalculationId = 1;
-  DecimalValue Price = 2;
+  int64 calculation_id = 1;
+  DecimalValue price = 2;
 }
 
 message DecimalValue {
