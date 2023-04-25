@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace Route256.Week5.Homework.PriceCalculator.GrpcServices.Validators;
+namespace Route256.Week5.Homework.PriceCalculator.Api.GrpcServices.Validators;
 
 public class GoodPropertiesValidator: AbstractValidator<Good>
 {

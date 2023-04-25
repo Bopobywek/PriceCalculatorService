@@ -1,24 +1,26 @@
 ﻿using Grpc.Core;
 using MediatR;
 using Microsoft.Extensions.Options;
+using Route256.Week5.Homework.PriceCalculator.Api.GrpcServices.Validators;
+using Route256.Week5.Homework.PriceCalculator.Api.Options;
 using Route256.Week5.Homework.PriceCalculator.Bll.Commands;
-using Route256.Week5.Homework.PriceCalculator.Bll.Exceptions;
 using Route256.Week5.Homework.PriceCalculator.Bll.Models;
 using Route256.Week5.Homework.PriceCalculator.Bll.Queries;
-using Route256.Week5.Homework.PriceCalculator.GrpcServices.Options;
-using Route256.Week5.Homework.PriceCalculator.GrpcServices.Validators;
 
-namespace Route256.Week5.Homework.PriceCalculator.GrpcServices.Services;
+namespace Route256.Week5.Homework.PriceCalculator.Api.GrpcServices;
 
 public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPriceCalculatorBase
 {
     private readonly IMediator _mediator;
-    private readonly IOptions<GrpcDeliveryPriceCalculatorOptions> _options;
+    private GrpcDeliveryPriceCalculatorOptions _options;
 
-    public DeliveryPriceCalculatorService(IMediator mediator, IOptions<GrpcDeliveryPriceCalculatorOptions> options)
+    public DeliveryPriceCalculatorService(IMediator mediator,
+        IOptionsMonitor<GrpcDeliveryPriceCalculatorOptions> optionsMonitor)
     {
         _mediator = mediator;
-        _options = options;
+        _options = optionsMonitor.CurrentValue;
+
+        optionsMonitor.OnChange(options => _options = options);
     }
 
     public override async Task<CalculationResponse> Calculate(CalculationRequest request, ServerCallContext context)
@@ -40,15 +42,7 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
                     x.Weight))
                 .ToArray());
 
-        CalculateDeliveryPriceResult result;
-        try
-        {
-            result = await _mediator.Send(command, context.CancellationToken);
-        }
-        catch (Exception exception)
-        {
-            throw new RpcException(new Status(StatusCode.Internal, exception.Message));
-        }
+        var result = await _mediator.Send(command, context.CancellationToken);
 
         return new CalculationResponse
         {
@@ -72,23 +66,7 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
             request.CalculationIds.ToArray()
         );
 
-        try
-        {
-            await _mediator.Send(query, context.CancellationToken);
-        }
-        catch (OneOrManyCalculationsNotFoundException)
-        {
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "One or many calculations not found"));
-        }
-        catch (OneOrManyCalculationsBelongsToAnotherUserException)
-        {
-            throw new RpcException(new Status(StatusCode.PermissionDenied,
-                "One or many calculations belongs to another user"));
-        }
-        catch (Exception exception)
-        {
-            throw new RpcException(new Status(StatusCode.Internal, exception.Message));
-        }
+        await _mediator.Send(query, context.CancellationToken);
 
         return new ClearHistoryResponse();
     }
@@ -109,20 +87,14 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
         GetHistoryQueryResult result;
         do
         {
+            var take = _options.HistoryTake;
             var query = new GetCalculationHistoryQuery(
                 request.UserId,
-                _options.Value.HistoryTake,
+                take,
                 skip,
                 Array.Empty<long>());
 
-            try
-            {
-                result = await _mediator.Send(query, context.CancellationToken);
-            }
-            catch (Exception exception)
-            {
-                throw new RpcException(new Status(StatusCode.Internal, exception.Message));
-            }
+            result = await _mediator.Send(query, context.CancellationToken);
 
             foreach (var historyItem in result.Items)
             {
@@ -133,7 +105,7 @@ public class DeliveryPriceCalculatorService : DeliveryPriceCalculator.DeliveryPr
                 });
             }
 
-            skip += _options.Value.HistoryTake;
+            skip += take;
         } while (result.Items.Length != 0);
     }
 
