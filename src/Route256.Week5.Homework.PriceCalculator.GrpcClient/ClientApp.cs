@@ -5,22 +5,26 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Options;
 using Route256.Week5.Homework.PriceCalculator.GrpcClient.Interfaces;
+using Route256.Week5.Homework.PriceCalculator.GrpcClient.Models;
 using Route256.Week5.Homework.PriceCalculator.GrpcClient.Options;
 
 namespace Route256.Week5.Homework.PriceCalculator.GrpcClient;
 
 public class ClientApp : IConsoleApp
 {
+    private readonly IContext _context;
     private readonly DeliveryPriceCalculator.DeliveryPriceCalculatorClient _client;
     private readonly Dictionary<string, Func<Task>> _availableMethods;
 
-    public ClientApp(IOptions<ClientOptions> options)
+    public ClientApp(IOptions<ClientOptions> options, IContext context)
     {
+        _context = context;
         var channel = GrpcChannel.ForAddress(options.Value.ServiceEndpoint);
         _client = new DeliveryPriceCalculator.DeliveryPriceCalculatorClient(channel);
         _availableMethods = new Dictionary<string, Func<Task>>
         {
             {"Calculate", HandleCalculateCall},
+            {"CalculateWithStreaming", HandleCalculateWithStreamingCall},
             {"GetHistory", HandleGetHistoryCall},
             {"ClearHistory", HandleClearHistoryCall}
         };
@@ -52,10 +56,67 @@ public class ClientApp : IConsoleApp
         } while (exitCommand != "exit");
     }
 
+    private async Task PrintReceivedCalculations(
+        AsyncDuplexStreamingCall<GoodCalculationRequest, GoodCalculationResponse> call)
+    {
+        await foreach (var response in call.ResponseStream.ReadAllAsync())
+        {
+            Console.WriteLine(
+                $"Получен результат от сервера: {{ GoodId: {response.GoodId}," +
+                $" Price: {DecimalValue.ToDecimal(response.Price).ToString(CultureInfo.InvariantCulture)} }} ");
+        }
+    }
+
+    private async Task HandleCalculateWithStreamingCall()
+    {
+        var path = GetPath();
+        await using var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read);
+
+        var requests = JsonSerializer.DeserializeAsyncEnumerable<GoodCalculationRequestModel>(fileStream);
+
+        using var call = _client.CalculateWithStreaming();
+        var readTask = PrintReceivedCalculations(call);
+        
+        try
+        {
+            await foreach (var goodCalculationRequestModel in requests)
+            {
+                if (goodCalculationRequestModel is null)
+                {
+                    Console.WriteLine("Не удалось прочитать один из объектов");
+                    continue;
+                }
+
+                var request = new GoodCalculationRequest
+                {
+                    GoodId = goodCalculationRequestModel.GoodId,
+                    Good = new Good
+                    {
+                        Width = goodCalculationRequestModel.Width,
+                        Height = goodCalculationRequestModel.Height,
+                        Length = goodCalculationRequestModel.Length,
+                        Weight = goodCalculationRequestModel.Weight
+                    }
+                };
+
+                await call.RequestStream.WriteAsync(request);
+            }
+        }
+        catch (JsonException)
+        {
+            Console.WriteLine(
+                "Не удалось полностью прочитать json файл. Убедитесь, что у входного файла LineEndings = \\n");
+            return;
+        }
+
+        await call.RequestStream.CompleteAsync();
+        await readTask;
+    }
+
     private Task HandleCalculateCall()
     {
         var userId = GetParameter<long>("UserId");
-        var goods = GetRepeated(GetGood);
+        var goods = GetRepeated(GetGood, "Goods");
 
         var request = new CalculationRequest
         {
@@ -103,7 +164,7 @@ public class ClientApp : IConsoleApp
                     getHistoryResponse.Cargo,
                     Price = DecimalValue.ToDecimal(getHistoryResponse.Price)
                 });
-                Console.WriteLine($"Получена запись: {representation}");
+                Console.WriteLine($"Получена результат от сервера: {representation}");
             }
 
             Console.WriteLine();
@@ -117,7 +178,8 @@ public class ClientApp : IConsoleApp
     private Task HandleClearHistoryCall()
     {
         var userId = GetParameter<long>("UserId");
-        var calculationIds = GetRepeated(() => GetParameter<long>("CalculationId"));
+        var calculationIds = GetRepeated(() => GetParameter<long>("CalculationId"),
+            "CalculationIds");
 
         var request = new ClearHistoryRequest
         {
@@ -140,11 +202,12 @@ public class ClientApp : IConsoleApp
         return Task.CompletedTask;
     }
 
-    private T[] GetRepeated<T>(Func<T> entityGetter)
+    private T[] GetRepeated<T>(Func<T> entityGetter, string parameterName)
     {
         var repeated = new List<T>();
-        const string inputMessage = "Ввод нескольких объектов || Для создания объекта введите \"create\"." +
-                                    "\nИначе, чтобы сформировать список введенных объектов, введите \"stop\": ";
+        string inputMessage = $"Ввод нескольких объектов для {parameterName} ||" +
+                              $" Для создания объекта введите \"create\".\nИначе," +
+                              $" чтобы сформировать список введенных объектов, введите \"stop\": ";
         Console.Write(inputMessage);
         var line = Console.ReadLine();
         while (line != "stop")
@@ -204,5 +267,37 @@ public class ClientApp : IConsoleApp
         }
 
         return value;
+    }
+
+    private string GetPath()
+    {
+        const string inputMessage = "Укажите путь к json-файлу, содержащему данные запросов," +
+                                    " относительно текущей рабочей директории";
+
+        string path;
+        bool isFirstAttempt = true;
+        do
+        {
+            if (!isFirstAttempt)
+            {
+                Console.WriteLine("Указанный путь либо не существует, либо ведет к файлу.");
+            }
+
+            Console.WriteLine($"{inputMessage}\nCurrent working directory: {_context.GetProjectDirectory()}");
+            Console.Write(">> ");
+
+            var relativePath = Console.ReadLine();
+            path = Path.Combine(_context.GetProjectDirectory(), relativePath ?? string.Empty);
+            isFirstAttempt = false;
+        } while (!File.Exists(path) || !IsFile(path));
+
+
+        return path;
+    }
+
+    private bool IsFile(string path)
+    {
+        var attributes = File.GetAttributes(path);
+        return !attributes.HasFlag(FileAttributes.Directory);
     }
 }

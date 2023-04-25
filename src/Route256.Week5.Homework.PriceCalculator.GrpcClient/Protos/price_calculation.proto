@@ -4,8 +4,19 @@ option csharp_namespace = "Route256.Week5.Homework.PriceCalculator.GrpcClient";
 
 service DeliveryPriceCalculator {
   rpc Calculate (CalculationRequest) returns (CalculationResponse);
+  rpc CalculateWithStreaming (stream GoodCalculationRequest) returns (stream GoodCalculationResponse);
   rpc ClearHistory (ClearHistoryRequest) returns (ClearHistoryResponse);
   rpc GetHistory (GetHistoryRequest) returns (stream GetHistoryResponse);
+}
+
+message GoodCalculationRequest {
+  int64 GoodId = 1;
+  Good good = 2;
+}
+
+message GoodCalculationResponse {
+  int64 GoodId = 1;
+  DecimalValue Price = 2;
 }
 
 message GetHistoryResponse {
