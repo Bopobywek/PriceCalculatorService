@@ -65,11 +65,4 @@ public static class CalculationEntityV1Faker
     {
         return src with { At = at };
     }
-
-    public static CalculationEntityV1 WithGoodIds(
-        this CalculationEntityV1 src,
-        long[] goodIds)
-    {
-        return src with { GoodIds = goodIds };
-    }
 }

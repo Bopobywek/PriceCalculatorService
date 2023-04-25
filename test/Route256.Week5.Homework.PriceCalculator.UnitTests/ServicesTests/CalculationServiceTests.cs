@@ -1,8 +1,9 @@
-using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
+using Route256.Week5.Homework.PriceCalculator.Bll.Models;
 using Route256.Week5.Homework.PriceCalculator.Bll.Services;
 using Route256.Week5.Homework.PriceCalculator.UnitTests.Builders;
 using Route256.Week5.Homework.PriceCalculator.UnitTests.Extensions;
@@ -20,13 +21,13 @@ public class CalculationServiceTests
     {
         // arrange
         const int goodsCount = 5;
-        
+
         var userId = Create.RandomId();
         var calculationId = Create.RandomId();
-        
+
         var goodModels = GoodModelFaker.Generate(goodsCount)
             .ToArray();
-        
+
         var goods = goodModels
             .Select(x => GoodEntityV1Faker.Generate().Single()
                 .WithUserId(userId)
@@ -38,12 +39,12 @@ public class CalculationServiceTests
         var goodIds = goods.Select(x => x.Id)
             .ToArray();
 
-        var calculationModel = CalculationModelFaker.Generate()
+        var calculationModel = SaveCalculationModelFaker.Generate()
             .Single()
             .WithUserId(userId)
             .WithGoods(goodModels);
-        
-        var calculations = CalculationEntityV1Faker.Generate(1)
+
+        var calculations = CalculationEntityV1Faker.Generate()
             .Select(x => x
                 .WithId(calculationId)
                 .WithUserId(userId)
@@ -51,10 +52,10 @@ public class CalculationServiceTests
                 .WithTotalWeight(calculationModel.TotalWeight)
                 .WithTotalVolume(calculationModel.TotalVolume))
             .ToArray();
-        
+
         var builder = new CalculationServiceBuilder();
         builder.CalculationRepository
-            .SetupAddCalculations(new [] { calculationId })
+            .SetupAddCalculations(new[] {calculationId})
             .SetupCreateTransactionScope();
         builder.GoodsRepository
             .SetupAddGoods(goodIds);
@@ -80,7 +81,7 @@ public class CalculationServiceTests
         // arrange
         var goodModels = GoodModelFaker.Generate(5)
             .ToArray();
-        
+
         var builder = new CalculationServiceBuilder();
         var service = builder.Build();
 
@@ -89,16 +90,16 @@ public class CalculationServiceTests
 
         //asserts
         volume.Should().BeApproximately(goodModels.Sum(x => x.Height * x.Width * x.Length), 1e-9d);
-        price.Should().Be((decimal)volume * CalculationService.VolumeToPriceRatio);
+        price.Should().Be((decimal) volume * CalculationService.VolumeToPriceRatio);
     }
-    
+
     [Fact]
     public void CalculatePriceByWeight_Success()
     {
         // arrange
         var goodModels = GoodModelFaker.Generate(5)
             .ToArray();
-        
+
         var builder = new CalculationServiceBuilder();
         var service = builder.Build();
 
@@ -107,9 +108,9 @@ public class CalculationServiceTests
 
         //asserts
         weight.Should().Be(goodModels.Sum(x => x.Weight));
-        price.Should().Be((decimal)weight * CalculationService.WeightToPriceRatio);
+        price.Should().Be((decimal) weight * CalculationService.WeightToPriceRatio);
     }
-    
+
     [Fact]
     public async Task QueryCalculations_Success()
     {
@@ -118,7 +119,7 @@ public class CalculationServiceTests
 
         var filter = QueryCalculationFilterFaker.Generate()
             .WithUserId(userId);
-        
+
         var calculations = CalculationEntityV1Faker.Generate(5)
             .Select(x => x.WithUserId(userId))
             .ToArray();
@@ -126,8 +127,7 @@ public class CalculationServiceTests
         var queryModel = CalculationHistoryQueryModelFaker.Generate()
             .WithUserId(userId)
             .WithLimit(filter.Limit)
-            .WithOffset(filter.Offset)
-            .WithIds(filter.CalculationIds);
+            .WithOffset(filter.Offset);
 
         var builder = new CalculationServiceBuilder();
         builder.CalculationRepository
@@ -140,7 +140,7 @@ public class CalculationServiceTests
         //asserts
         service.CalculationRepository
             .VerifyQueryWasCalledOnce(queryModel);
-        
+
         service.VerifyNoOtherCalls();
 
         result.Should().NotBeEmpty();
@@ -155,41 +155,29 @@ public class CalculationServiceTests
     }
 
     [Fact]
-    public async Task GetCalculations_Success()
+    public async Task QueryCalculations_WithCalculationsIds_Success()
     {
-        // arrange
+        // Arrange
         var userId = Create.RandomId();
-        var calculationIdsCount = 1;
 
         var calculations = CalculationEntityV1Faker.Generate(5)
             .Select(x => x.WithUserId(userId))
             .ToArray();
-
-        var calculationIds = new long[calculationIdsCount]
-            .Select(i => Create.RandomId())
-            .ToArray();
-        
-        var queryModel = CalculationHistoryQueryModelFaker.Generate()
-            .WithUserId(null)
-            .WithLimit(calculationIds.Length)
-            .WithOffset(0)
-            .WithIds(calculationIds);
+        var calculationsIds = calculations.Select(x => x.Id).ToArray();
 
         var builder = new CalculationServiceBuilder();
         builder.CalculationRepository
-            .SetupQueryCalculation(calculations);
+            .SetupQueryCalculationWithIds(calculations);
         var service = builder.Build();
 
-        //act
-        var result = await service.GetCalculation(calculationIds, default);
+        // Act
+        var result = await service.QueryCalculations(calculationsIds, default);
 
-        //asserts
-        service.CalculationRepository
-            .VerifyQueryWasCalledOnce(queryModel);
-
+        // Assert
+        service.CalculationRepository.VerifyQueryWithIdsWasCalledOnce(calculationsIds);
         service.VerifyNoOtherCalls();
 
-        result.Should().NotBeEmpty();
+        result.Should().HaveCount(5);
         result.Should().OnlyContain(x => x.UserId == userId);
         result.Should().OnlyContain(x => x.Id > 0);
         result.Select(x => x.TotalWeight)
@@ -201,61 +189,78 @@ public class CalculationServiceTests
     }
 
     [Fact]
-    public async Task DeleteCalculationAndGoods_Success()
+    public async Task ClearCalculationsHistory_WithUserId_Success()
     {
-
-        // arrange
-        var calculationIdsCount = 1;
-        const int goodsCount = 2;
-
+        // Arrange
         var userId = Create.RandomId();
-        var calculationIds = new long[calculationIdsCount]
-            .Select(i=> Create.RandomId())
-            .ToArray();
-
-        var goodModels = GoodModelFaker.Generate(goodsCount)
-            .ToArray();
-
-        var goods = goodModels
-            .Select(x => GoodEntityV1Faker.Generate().Single()
-                .WithUserId(userId)
-                .WithHeight(x.Height)
-                .WithWidth(x.Width)
-                .WithLength(x.Length)
-                .WithWeight(x.Weight))
-            .ToArray();
-
-        var goodIds = goods.Select(x => x.Id)
-            .ToArray();
-
-        var calculations = CalculationEntityV1Faker.Generate(calculationIdsCount)
-            .Select((x, i) => x
-                .WithId(calculationIds[i])
-                .WithGoodIds(goodIds)
-                .WithUserId(userId))
-            .ToArray();
+        int transactionScopeCreatedCount = 0;
 
         var builder = new CalculationServiceBuilder();
-        
         builder.CalculationRepository
-            .SetupQueryCalculation(calculations)
-            .SetupDeleteCalculation()
-            .SetupCreateTransactionScope();
+            .SetupClearCalculationsWithUserId()
+            .SetupCreateTransactionScopeWithReturns()
+            .Callback(() => Interlocked.Increment(ref transactionScopeCreatedCount));
         builder.GoodsRepository
-            .SetupDeleteGoods();
-
+            .SetupClearGoodsWithUserId()
+            .SetupCreateTransactionScopeWithReturns()
+            .Callback(() => Interlocked.Increment(ref transactionScopeCreatedCount));
+        
         var service = builder.Build();
-
-        // act
-        await service.DeleteCalculationAndGoods(calculationIds, goodIds, default);
-
-        // assert
+        
+        // Act
+        await service.ClearCalculationsHistory(userId, default);
+        
+        // Assert
         service.CalculationRepository
-            .VerifyDeleteWasCalledOnce(calculationIds)
-            .VerifyCreateTransactionScopeWasCalledOnce(IsolationLevel.ReadCommitted);
-        service.GoodsRepository
-            .VerifyDeleteWasCalledOnce(goodIds);
-        service.VerifyNoOtherCalls();
+            .VerifyClearCalculationsWasCalledOnce(userId);
 
+        service.GoodsRepository
+            .VerifyClearGoodsWasCalledOnce(userId);
+
+        transactionScopeCreatedCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ClearCalculationsHistory_WithModel_Success()
+    {
+        // Arrange
+        int transactionScopeCreatedCount = 0;
+        var userId = Create.RandomId();
+        
+        var calculations = CalculationEntityV1Faker.Generate(5)
+            .Select(x => x.WithUserId(userId))
+            .ToArray();
+        var calculationsIds = calculations.Select(x => x.Id).ToArray();
+        
+        var goods = GoodEntityV1Faker.Generate(5)
+            .Select(x => x.WithUserId(userId))
+            .ToArray();
+        var goodsIds = goods.Select(x => x.Id).ToArray();
+
+        var clearCalculationsHistoryModel = new ClearCalculationsHistoryModel(goodsIds, calculationsIds);
+
+        var builder = new CalculationServiceBuilder();
+        builder.CalculationRepository
+            .SetupClearCalculationsWithCalculationsIds()
+            .SetupCreateTransactionScopeWithReturns()
+            .Callback(() => Interlocked.Increment(ref transactionScopeCreatedCount));
+        builder.GoodsRepository
+            .SetupClearGoodsWithGoodsIds()
+            .SetupCreateTransactionScopeWithReturns()
+            .Callback(() => Interlocked.Increment(ref transactionScopeCreatedCount));
+        
+        var service = builder.Build();
+        
+        // Act
+        await service.ClearCalculationsHistory(clearCalculationsHistoryModel, default);
+        
+        // Assert
+        service.CalculationRepository
+            .VerifyClearCalculationsWasCalledOnce(calculationsIds);
+
+        service.GoodsRepository
+            .VerifyClearGoodsWasCalledOnce(goodsIds);
+
+        transactionScopeCreatedCount.Should().Be(1);
     }
 }

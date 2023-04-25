@@ -1,6 +1,8 @@
 using FluentValidation.AspNetCore;
-using Route256.Week5.Homework.PriceCalculator.Api.Middleware;
+using Route256.Week5.Homework.PriceCalculator.Api.GrpcServices;
+using Route256.Week5.Homework.PriceCalculator.Api.GrpcServices.Interceptors;
 using Route256.Week5.Homework.PriceCalculator.Api.NamingPolicies;
+using Route256.Week5.Homework.PriceCalculator.Api.Options;
 using Route256.Week5.Homework.PriceCalculator.Bll.Extensions;
 using Route256.Week5.Homework.PriceCalculator.Dal.Extensions;
 
@@ -34,7 +36,14 @@ services.AddFluentValidation(conf =>
 services
     .AddBll()
     .AddDalInfrastructure(builder.Configuration)
-    .AddDalRepositories();
+    .AddDalRepositories()
+    .Configure<GrpcDeliveryPriceCalculatorOptions>(
+        builder.Configuration.GetSection(GrpcDeliveryPriceCalculatorOptions.SectionName))
+    .AddGrpcReflection()
+    .AddGrpc(options =>
+    {
+        options.Interceptors.Add<ExceptionInterceptor>();
+    });
 
 var app = builder.Build();
 
@@ -44,7 +53,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseMiddleware<ExceptionHandlerMiddleware>();
 app.MapControllers();
-app.MigrateUp();
+app.MapGrpcService<DeliveryPriceCalculatorService>();
+app.MapGrpcReflectionService();
 app.Run();

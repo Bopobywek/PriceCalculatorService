@@ -70,23 +70,41 @@ select id
         return goods
             .ToArray();
     }
-
-    public async Task Delete(long[] goodsIds, CancellationToken cancellationToken)
+    public async Task ClearGoods(long[] goodsIds, CancellationToken token)
     {
         const string sqlQuery = @"
- delete from goods where id = any(@GoodsIds);
+delete from goods
+where id = ANY(@ids)
 ";
-        await using var connection = await GetAndOpenConnection();
-
         var sqlQueryParams = new
         {
-            GoodsIds = goodsIds
+            ids = goodsIds
         };
-
-        await connection.QueryAsync(
+        
+        await using var connection = await GetAndOpenConnection();
+        await connection.ExecuteAsync(
             new CommandDefinition(
                 sqlQuery,
                 sqlQueryParams,
-                cancellationToken: cancellationToken));
+                cancellationToken: token));
+    }
+
+    public async Task ClearGoods(long userId, CancellationToken token)
+    {
+        const string sqlQuery = @"
+delete from goods
+where user_id = @UserId
+";
+        var sqlQueryParams = new
+        {
+            UserId = userId
+        };
+        
+        await using var connection = await GetAndOpenConnection();
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                sqlQuery,
+                sqlQueryParams,
+                cancellationToken: token));
     }
 }

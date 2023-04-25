@@ -1,40 +1,40 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Route256.Week5.Homework.PriceCalculator.Api.Requests.V1;
+using Route256.Week5.Homework.PriceCalculator.Api.ActionFilters;
 using Route256.Week5.Homework.PriceCalculator.Api.Requests.V2;
-using Route256.Week5.Homework.PriceCalculator.Api.Responses.V1;
+using Route256.Week5.Homework.PriceCalculator.Api.Responses.V2;
+using Route256.Week5.Homework.PriceCalculator.Bll.Commands;
+using Route256.Week5.Homework.PriceCalculator.Bll.Models;
 using Route256.Week5.Homework.PriceCalculator.Bll.Queries;
 
 namespace Route256.Week5.Homework.PriceCalculator.Api.Controllers.V2;
 
 [ApiController]
 [Route("/v2/delivery-prices")]
-public class DeliveryPricesV2Controller : ControllerBase
+public class DeliveryPricesController : ControllerBase
 {
     private readonly IMediator _mediator;
 
-    public DeliveryPricesV2Controller(
+    public DeliveryPricesController(
         IMediator mediator)
     {
         _mediator = mediator;
     }
 
     /// <summary>
-    /// Метод получения истории вычисления с возможностью фильтрации по UserId или CalculationIds
+    /// Метод получения истории вычисления
     /// </summary>
     /// <returns></returns>
     [HttpPost("get-history")]
     public async Task<GetHistoryResponse[]> History(
-        GetHistoryV2Request request,
+        GetHistoryRequest request,
         CancellationToken ct)
     {
         var query = new GetCalculationHistoryQuery(
             request.UserId,
-            Take: request.Take,
-            Skip: request.Skip,
-            request.CalculationIds
-        );
-
+            request.Take,
+            request.Skip,
+            request.CalculationIds);
         var result = await _mediator.Send(query, ct);
 
         return result.Items

@@ -111,24 +111,57 @@ public class GoodsRepositoryTests
         // Assert
         foundGoods.Should().BeEmpty();
     }
-
+    
     [Fact]
-    public async Task Delete_Good_Success()
+    public async Task ClearGoods_UserIdSpecified_ShouldClearAllGoodsOnlyForSpecifiedUser()
     {
         // Arrange
         var userId = Create.RandomId();
-
-        var goods = GoodEntityV1Faker.Generate()
+        var anotherUserId = Create.RandomId();
+        
+        var specifiedUserGoods = GoodEntityV1Faker.Generate(10)
             .Select(x => x.WithUserId(userId))
             .ToArray();
-
-        var goodIds = (await _goodsRepository.Add(goods, default));
-
+        
+        var anotherUserGoods = GoodEntityV1Faker.Generate(10)
+            .Select(x => x.WithUserId(anotherUserId))
+            .ToArray();
+        
         // Act
-        await _goodsRepository.Delete(goodIds, default);
+        await _goodsRepository.Add(specifiedUserGoods, default);
+        var anotherUserGoodIds = await _goodsRepository.Add(anotherUserGoods, default);
 
+        await _goodsRepository.ClearGoods(userId, default);
+        
+        var foundSpecifiedUserGoods = await _goodsRepository.Query(userId, default);
+        var foundAnotherUserGoods = await _goodsRepository.Query(anotherUserId, default);
+        
         // Assert
+        foundSpecifiedUserGoods.Should().BeEmpty();
+        foundAnotherUserGoods.Should().OnlyContain(x => anotherUserGoodIds.Contains(x.Id));
+    }
+    
+    [Fact]
+    public async Task ClearGoods_GoodsIdsSpecified_ShouldClearOnlySpecifiedGoods()
+    {
+        // Arrange
+        var userId = Create.RandomId();
+        
+        var goods = GoodEntityV1Faker.Generate(35)
+            .Select(x => x.WithUserId(userId))
+            .ToArray();
+        
+        // Act
+        var goodsIds = await _goodsRepository.Add(goods, default);
+        var goodsIdsForDelete = goodsIds.Skip(7).ToArray();
+        var remainingGoodsIds = goodsIds.Except(goodsIdsForDelete).ToArray();
+        
+        await _goodsRepository.ClearGoods(goodsIdsForDelete, default);
+        
         var foundGoods = await _goodsRepository.Query(userId, default);
-        foundGoods.Should().BeEmpty();
+        var foundGoodsIds = foundGoods.Select(x => x.Id).ToArray();
+        
+        // Assert
+        foundGoodsIds.Should().BeEquivalentTo(remainingGoodsIds);
     }
 }

@@ -148,7 +148,7 @@ public class CalculationsRepositoryTests
         foundCalculations.Should().OnlyContain(x => calculationIds.Contains(x.Id));
         foundCalculations.Should().BeInDescendingOrder(x => x.At);
     }
-
+    
     [Fact]
     public async Task Query_Calculations_ReturnsEmpty_WhenForWrongUser()
     {
@@ -173,9 +173,9 @@ public class CalculationsRepositoryTests
         // Assert
         foundCalculations.Should().BeEmpty();
     }
-
+    
     [Fact]
-    public async Task Query_CalculationsById_Success()
+    public async Task Query_CalculationsIdsSpecified_Success()
     {
         // Arrange
         var userId = Create.RandomId();
@@ -187,24 +187,23 @@ public class CalculationsRepositoryTests
             .ToArray();
 
         var calculationIds = (await _calculationRepository.Add(calculations, default))
-            .ToHashSet();
-
+            .ToArray();
+        
         // Act
         var foundCalculations = await _calculationRepository.Query(
-            new CalculationHistoryQueryModel(null, 100, 0, calculationIds.ToArray()),
+            calculationIds, 
             default);
-
+        var foundCalculationsIds = foundCalculations.Select(x => x.Id).ToArray();
+        
         // Assert
-        foundCalculations.Should().NotBeEmpty();
-        foundCalculations.Should().OnlyContain(x => x.UserId == userId);
-        foundCalculations.Should().OnlyContain(x => calculationIds.Contains(x.Id));
-        foundCalculations.Should().BeInDescendingOrder(x => x.At);
+        foundCalculationsIds.Should().BeEquivalentTo(calculationIds);
     }
 
     [Fact]
-    public async Task Delete_Calculations_Success()
+    public async Task Query_CalculationsIdsEmpty_ShouldReturnEmpty()
     {
         // Arrange
+        var calculationIds = Array.Empty<long>();
         var userId = Create.RandomId();
         var now = DateTimeOffset.UtcNow;
 
@@ -212,18 +211,69 @@ public class CalculationsRepositoryTests
             .Select(x => x.WithUserId(userId)
                 .WithAt(now))
             .ToArray();
-
-        var calculationIds = (await _calculationRepository.Add(calculations, default))
-            .ToHashSet();
-
+        
         // Act
-        await _calculationRepository.Delete(calculationIds.ToArray(), default);
-
-        // Assert
+        await _calculationRepository.Add(calculations, default);
+        
         var foundCalculations = await _calculationRepository.Query(
-            new CalculationHistoryQueryModel(userId, calculationIds.Count, 0, calculationIds.ToArray()),
+            calculationIds, 
             default);
+        
+        // Assert
         foundCalculations.Should().BeEmpty();
     }
+    
+    [Fact]
+    public async Task ClearCalculations_UserIdSpecified_ShouldClearAllHistoryForUser()
+    {
+        // Arrange
+        var userId = Create.RandomId();
+        var now = DateTimeOffset.UtcNow;
 
+        var calculations = CalculationEntityV1Faker.Generate(5)
+            .Select(x => x.WithUserId(userId)
+                .WithAt(now))
+            .ToArray();
+
+        await _calculationRepository.Add(calculations, default);
+        
+        // Act
+        await _calculationRepository.ClearCalculations(userId, default);
+        
+        var foundCalculations = await _calculationRepository.Query(
+            new CalculationHistoryQueryModel(userId, 100, 0), 
+            default);
+        
+        // Assert
+        foundCalculations.Should().BeEmpty();
+    }
+    
+    [Fact]
+    public async Task ClearCalculations_CalculationsIdsArraySpecified_ShouldClearOnlyFromArray()
+    {
+        // Arrange
+        var userId = Create.RandomId();
+        var now = DateTimeOffset.UtcNow;
+
+        var calculations = CalculationEntityV1Faker.Generate(15)
+            .Select(x => x.WithUserId(userId)
+                .WithAt(now))
+            .ToArray();
+
+        var calculationsIds = await _calculationRepository.Add(calculations, default);
+        var calculationsIdsForDelete = calculationsIds.Skip(4).ToArray();
+        var remainingCalculationsIds = calculationsIds.Except(calculationsIdsForDelete).ToArray();
+        
+        // Act
+        await _calculationRepository.ClearCalculations(calculationsIdsForDelete, default);
+        
+        var foundCalculations = await _calculationRepository.Query(
+            new CalculationHistoryQueryModel(userId, 100, 0), 
+            default);
+
+        var foundCalculationsIds = foundCalculations.Select(x => x.Id).ToArray();
+        
+        // Assert
+        foundCalculationsIds.Should().BeEquivalentTo(remainingCalculationsIds);
+    }
 }

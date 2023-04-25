@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Route256.Week5.Homework.PriceCalculator.Api.ActionFilters;
 using Route256.Week5.Homework.PriceCalculator.Api.Requests.V1;
 using Route256.Week5.Homework.PriceCalculator.Api.Responses.V1;
 using Route256.Week5.Homework.PriceCalculator.Bll.Commands;
@@ -19,7 +20,7 @@ public class DeliveryPricesController : ControllerBase
     {
         _mediator = mediator;
     }
-
+    
     /// <summary>
     /// Метод расчета стоимости доставки на основе объема товаров
     /// или веса товара. Окончательная стоимость принимается как наибольшая
@@ -40,12 +41,13 @@ public class DeliveryPricesController : ControllerBase
                     x.Weight))
                 .ToArray());
         var result = await _mediator.Send(command, ct);
-
+        
         return new CalculateResponse(
             result.CalculationId,
             result.Price);
     }
-
+    
+    
     /// <summary>
     /// Метод получения истории вычисления
     /// </summary>
@@ -58,7 +60,8 @@ public class DeliveryPricesController : ControllerBase
         var query = new GetCalculationHistoryQuery(
             request.UserId,
             request.Take,
-            request.Skip);
+            request.Skip,
+            Array.Empty<long>());
         var result = await _mediator.Send(query, ct);
 
         return result.Items
@@ -70,23 +73,21 @@ public class DeliveryPricesController : ControllerBase
                 x.Price))
             .ToArray();
     }
-
+    
     /// <summary>
-    /// Method for clearing the user's settlement history
+    /// Метод для частичной или полной очистки истории вычислений
     /// </summary>
     /// <returns></returns>
     [HttpPost("clear-history")]
-    public async Task<ClearHistoryResponse> ClearHistory(
+    [CalculationsHistoryExceptionFilter]
+    public async Task ClearHistory(
         ClearHistoryRequest request,
         CancellationToken ct)
     {
-        var query = new ClearHistoryCommand(
+        var command = new ClearCalculationsHistoryCommand(
             request.UserId,
-            request.CalculationIds
-        );
-
-        await _mediator.Send(query, ct);
-
-        return new ClearHistoryResponse();
+            request.CalculationIds);
+        
+        await _mediator.Send(command, ct);
     }
 }

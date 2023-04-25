@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Transactions;
 using Moq;
+using Moq.Language.Flow;
 using Route256.Week5.Homework.PriceCalculator.Dal.Entities;
 using Route256.Week5.Homework.PriceCalculator.Dal.Models;
 using Route256.Week5.Homework.PriceCalculator.Dal.Repositories.Interfaces;
@@ -33,6 +34,14 @@ public static class CalculationRepositoryExtensions
         return repository;
     }
     
+    public static IReturnsResult<ICalculationRepository> SetupCreateTransactionScopeWithReturns(
+        this Mock<ICalculationRepository> repository)
+    {
+        return repository.Setup(p =>
+                p.CreateTransactionScope(It.IsAny<IsolationLevel>()))
+            .Returns(() => new TransactionScope());
+    }
+    
     public static Mock<ICalculationRepository> SetupQueryCalculation(
         this Mock<ICalculationRepository> repository,
         CalculationEntityV1[] calculations)
@@ -44,6 +53,64 @@ public static class CalculationRepositoryExtensions
 
         return repository;
     }
+    
+    public static Mock<ICalculationRepository> SetupQueryCalculationWithIds(
+        this Mock<ICalculationRepository> repository,
+        CalculationEntityV1[] calculations)
+    {
+        repository.Setup(p =>
+                p.Query(It.IsAny<long[]>(), 
+                        It.IsAny<CancellationToken>()))
+            .ReturnsAsync(calculations);
+
+        return repository;
+    }
+    
+    public static Mock<ICalculationRepository> SetupClearCalculationsWithUserId(
+        this Mock<ICalculationRepository> repository)
+    {
+        repository.Setup(p =>
+            p.ClearCalculations(It.IsAny<long>(),
+                It.IsAny<CancellationToken>()));
+
+        return repository;
+    }
+    
+    public static Mock<ICalculationRepository> SetupClearCalculationsWithCalculationsIds(
+        this Mock<ICalculationRepository> repository)
+    {
+        repository.Setup(p =>
+            p.ClearCalculations(It.IsAny<long[]>(),
+                It.IsAny<CancellationToken>()));
+
+        return repository;
+    }
+    
+    public static Mock<ICalculationRepository> VerifyClearCalculationsWasCalledOnce(
+        this Mock<ICalculationRepository> repository,
+        long userId)
+    {
+        repository.Verify(p =>
+                p.ClearCalculations(
+                    It.Is<long>(x => x == userId),
+                    It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        return repository;
+    }
+    
+    public static Mock<ICalculationRepository> VerifyClearCalculationsWasCalledOnce(
+        this Mock<ICalculationRepository> repository,
+        long[] calculationsIds)
+    {
+        repository.Verify(p =>
+                p.ClearCalculations(
+                    It.Is<long[]>(x => calculationsIds.SequenceEqual(x)),
+                    It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        return repository;
+    }
 
     public static Mock<ICalculationRepository> VerifyAddWasCalledOnce(
         this Mock<ICalculationRepository> repository,
@@ -51,7 +118,8 @@ public static class CalculationRepositoryExtensions
     {
         repository.Verify(p =>
                 p.Add(
-                    It.Is<CalculationEntityV1[]>(x => x.SequenceEqual(calculations, new CalculationEntityV1Comparer())),
+                    It.Is<CalculationEntityV1[]>(x => 
+                        x.SequenceEqual(calculations, new CalculationEntityV1Comparer())),
                     It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -67,6 +135,20 @@ public static class CalculationRepositoryExtensions
                     It.Is<CalculationHistoryQueryModel>(x => x == query),
                     It.IsAny<CancellationToken>()),
             Times.Once);
+        
+        return repository;
+    }
+    
+    public static Mock<ICalculationRepository> VerifyQueryWithIdsWasCalledOnce(
+        this Mock<ICalculationRepository> repository,
+        long[] calculationsIds)
+    {
+        repository.Verify(p =>
+                p.Query(
+                    It.Is<long[]>(x => calculationsIds.SequenceEqual(x)),
+                    It.IsAny<CancellationToken>()),
+            Times.Once);
+        
         return repository;
     }
     
@@ -79,28 +161,6 @@ public static class CalculationRepositoryExtensions
                     It.Is<IsolationLevel>(x => x == isolationLevel)),
             Times.Once);
         
-        return repository;
-    }
-
-    public static Mock<ICalculationRepository> VerifyDeleteWasCalledOnce(
-        this Mock<ICalculationRepository> repository,
-        long[] calculationIds)
-    {
-        repository.Verify(p =>
-                p.Delete(
-                    It.Is<long[]>(x => x.SequenceEqual(calculationIds)),
-                    It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        return repository;
-    }
-
-    public static Mock<ICalculationRepository> SetupDeleteCalculation(
-        this Mock<ICalculationRepository> repository)
-    {
-        repository.Setup(p =>
-                p.Delete(It.IsAny<long[]>(),
-                    It.IsAny<CancellationToken>()));
         return repository;
     }
 }
