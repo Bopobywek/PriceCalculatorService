@@ -3,8 +3,10 @@ using FluentMigrator.Runner;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Route256.Week5.Homework.PriceCalculator.Dal.Extensions;
 using Route256.Week5.Homework.PriceCalculator.Dal.Repositories.Interfaces;
+using Route256.Week5.Homework.PriceCalculator.Dal.Settings;
 
 namespace Route256.Week5.Homework.PriceCalculator.IntegrationTests.Fixtures
 {
@@ -13,6 +15,8 @@ namespace Route256.Week5.Homework.PriceCalculator.IntegrationTests.Fixtures
         public ICalculationRepository CalculationRepository { get; }
 
         public IGoodsRepository GoodsRepository { get; }
+        public IAnomaliesRepository AnomaliesRepository { get; }
+        public DalOptions DalSettings { get; }
 
         public TestFixture()
         {
@@ -35,6 +39,8 @@ namespace Route256.Week5.Homework.PriceCalculator.IntegrationTests.Fixtures
             var serviceProvider = host.Services;
             CalculationRepository = serviceProvider.GetRequiredService<ICalculationRepository>();
             GoodsRepository = serviceProvider.GetRequiredService<IGoodsRepository>();
+            AnomaliesRepository = serviceProvider.GetRequiredService<IAnomaliesRepository>();
+            DalSettings = serviceProvider.GetRequiredService<IOptions<DalOptions>>().Value;
         }
 
         private static void ClearDatabase(IHost host)
