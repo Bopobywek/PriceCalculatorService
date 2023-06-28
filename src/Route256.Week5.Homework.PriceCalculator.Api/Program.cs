@@ -3,6 +3,7 @@ using Route256.Week5.Homework.PriceCalculator.Api.GrpcServices;
 using Route256.Week5.Homework.PriceCalculator.Api.GrpcServices.Interceptors;
 using Route256.Week5.Homework.PriceCalculator.Api.NamingPolicies;
 using Route256.Week5.Homework.PriceCalculator.Api.Options;
+using Route256.Week5.Homework.PriceCalculator.BackgroundServices.Extensions;
 using Route256.Week5.Homework.PriceCalculator.Bll.Extensions;
 using Route256.Week5.Homework.PriceCalculator.Dal.Extensions;
 
@@ -35,6 +36,7 @@ services.AddFluentValidation(conf =>
 //add dependencies
 services
     .AddBll()
+    .AddBackgroundServices(builder.Configuration)
     .AddDalInfrastructure(builder.Configuration)
     .AddDalRepositories()
     .Configure<GrpcDeliveryPriceCalculatorOptions>(
@@ -53,7 +55,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.MapControllers();
+app.MigrateUp();
 app.MapGrpcService<DeliveryPriceCalculatorService>();
 app.MapGrpcReflectionService();
 app.Run();

@@ -1,8 +1,6 @@
 ﻿using MediatR;
 using Route256.Week5.Homework.PriceCalculator.Bll.Commands;
 using Route256.Week5.Homework.PriceCalculator.Bll.Services.Interfaces;
-using Route256.Week5.Homework.PriceCalculator.Bll.Commands;
-using Route256.Week5.Homework.PriceCalculator.Bll.Services.Interfaces;
 
 namespace Route256.Week5.Homework.PriceCalculator.Bll.Handlers;
 

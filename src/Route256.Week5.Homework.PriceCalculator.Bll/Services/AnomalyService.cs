@@ -1,6 +1,4 @@
 ﻿using Route256.Week5.Homework.PriceCalculator.Bll.Services.Interfaces;
-using Route256.Week5.Homework.PriceCalculator.Bll.Models;
-using Route256.Week5.Homework.PriceCalculator.Bll.Services.Interfaces;
 using Route256.Week5.Homework.PriceCalculator.Dal.Entities;
 using Route256.Week5.Homework.PriceCalculator.Dal.Repositories.Interfaces;
 

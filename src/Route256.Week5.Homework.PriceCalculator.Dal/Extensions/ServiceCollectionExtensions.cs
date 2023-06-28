@@ -14,6 +14,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICalculationRepository, CalculationRepository>();
         services.AddScoped<IGoodsRepository, GoodsRepository>();
+        services.AddScoped<IAnomaliesRepository, AnomaliesRepository>();
         
         return services;
     }
